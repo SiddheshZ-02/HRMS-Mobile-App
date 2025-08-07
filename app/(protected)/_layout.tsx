@@ -9,6 +9,7 @@ import { Drawer } from "expo-router/drawer";
 import React from "react";
 import {
   Dimensions,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,11 +21,29 @@ const _layout = () => {
   const path = usePathname();
   const CustomDrawer = (props: DrawerContentComponentProps) => {
     return (
-      <View style={{ flex: 1, backgroundColor: "#f7f8fa", }}>
+      <View style={{ flex: 1, backgroundColor: "#f7f8fa" }}>
         <DrawerContentScrollView
           {...props}
           contentContainerStyle={{ flexGrow: 1 }}
         >
+          <View style={[styles.header, { padding: 20 }]}>
+            <Image
+              source={require("@/assets/images/actifylogo.png")}
+              style={styles.logo}
+            />
+
+            <Text
+              style={{
+                color: "#333",
+                fontSize: 20,
+                fontWeight: "bold",
+                marginTop: 4,
+              }}
+            >
+              HR PORTAL
+            </Text>
+          </View>
+
           <View style={{ height: 1, marginHorizontal: 10 }} />
           <TouchableOpacity
             style={[
@@ -38,7 +57,7 @@ const _layout = () => {
               });
             }}
           >
-            <View  style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               <MaterialIcons
                 name="home"
                 size={24}
@@ -118,7 +137,28 @@ const _layout = () => {
         options={{
           title: "Attendance",
           drawerActiveTintColor: "#112990ff",
-
+          drawerItemStyle: {
+            borderRadius: 10,
+          },
+          headerRight: (props) => {
+            return <></>;
+          },
+          drawerIcon: ({ focused }) => {
+            return (
+              <FontAwesome6
+                name="calendar-check"
+                size={24}
+                color={focused ? "#0c0d6cff" : "#b9c9ed"}
+              />
+            );
+          },
+        }}
+      />
+      <Drawer.Screen
+        name="meetingLists"
+        options={{
+          title: "Meeting Lists",
+          drawerActiveTintColor: "#112990ff",
           drawerItemStyle: {
             borderRadius: 10,
           },
