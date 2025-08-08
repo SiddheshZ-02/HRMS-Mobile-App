@@ -1,27 +1,20 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
-import {
-  ScrollView,
-  Text,
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-  Platform,
-  Linking,
-  ActivityIndicator,
-  useColorScheme,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useColorScheme,
+    View
+} from "react-native";
 import { DatePickerModal } from "react-native-paper-dates";
-import { LegendList } from "@legendapp/list";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { Dropdown } from "react-native-element-dropdown";
-import { RefreshControl } from "react-native-gesture-handler";
 
-import Feather from "@expo/vector-icons/Feather";
 
 const { width } = Dimensions.get("window");
 

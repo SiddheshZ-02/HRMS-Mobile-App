@@ -1,3 +1,4 @@
+import { Colors } from "@/constants/Colors";
 import { MaterialIcons } from "@expo/vector-icons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import {
@@ -14,14 +15,18 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 
 const _layout = () => {
   const router = useRouter();
   const path = usePathname();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   const CustomDrawer = (props: DrawerContentComponentProps) => {
     return (
-      <View style={{ flex: 1, backgroundColor: "#f7f8fa" }}>
+      <View style={[styles.drawerContainer, { backgroundColor: colors.background }]}>
         <DrawerContentScrollView
           {...props}
           contentContainerStyle={{ flexGrow: 1 }}
@@ -33,23 +38,22 @@ const _layout = () => {
             />
 
             <Text
-              style={{
-                color: "#333",
-                fontSize: 20,
-                fontWeight: "bold",
-                marginTop: 4,
-              }}
+              style={[styles.headerTitle, { color: colors.textPrimary }]}
             >
               HR PORTAL
             </Text>
           </View>
 
-          <View style={{ height: 1, marginHorizontal: 10 }} />
+          <View style={[styles.divider,]} />
+          
           <TouchableOpacity
             style={[
               styles.drawerItem,
               props.state.routeNames[props.state.index] === "index" &&
-                styles.activeDrawerItem,
+                [styles.activeDrawerItem, { 
+                  backgroundColor: colors.surfaceVariant,
+                  borderLeftColor: colors.primary 
+                }],
             ]}
             onPress={() => {
               requestAnimationFrame(() => {
@@ -63,20 +67,24 @@ const _layout = () => {
                 size={24}
                 color={
                   props.state.routeNames[props.state.index] === "index"
-                    ? "#0c0d6cff"
-                    : "#b9c9ed"
+                    ? colors.primary
+                    : colors.textTertiary
                 }
               />
-              <Text style={styles.drawerItemText}>Home</Text>
+              <Text style={[styles.drawerItemText, { color: colors.textPrimary }]}>Home</Text>
             </View>
           </TouchableOpacity>
-          <View style={styles.divider} />
+          
+          <View style={[styles.divider,]} />
 
           <TouchableOpacity
             style={[
               styles.drawerItem,
               props.state.routeNames[props.state.index] === "attendance" &&
-                styles.activeDrawerItem,
+                [styles.activeDrawerItem, { 
+                  backgroundColor: colors.surfaceVariant,
+                  borderLeftColor: colors.primary 
+                }],
             ]}
             onPress={() => {
               requestAnimationFrame(() => {
@@ -90,15 +98,15 @@ const _layout = () => {
                 size={24}
                 color={
                   props.state.routeNames[props.state.index] === "attendance"
-                    ? "#0c0d6cff"
-                    : "#b9c9ed"
+                    ? colors.primary
+                    : colors.textTertiary
                 }
               />
-              <Text style={styles.drawerItemText}>Attendance</Text>
+              <Text style={[styles.drawerItemText, { color: colors.textPrimary }]}>Attendance</Text>
             </View>
           </TouchableOpacity>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider]} />
         </DrawerContentScrollView>
       </View>
     );
@@ -110,6 +118,11 @@ const _layout = () => {
       screenOptions={{
         freezeOnBlur: true,
         swipeEdgeWidth: Dimensions.get("window").width * 0.3,
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.textPrimary,
+        drawerStyle: { backgroundColor: colors.background },
+        drawerActiveTintColor: colors.primary,
+        drawerInactiveTintColor: colors.textTertiary,
       }}
       backBehavior="fullHistory"
     >
@@ -117,7 +130,7 @@ const _layout = () => {
         name="index"
         options={{
           title: "Home",
-          drawerActiveTintColor: "#112990ff",
+          drawerActiveTintColor: colors.primary,
           drawerItemStyle: {
             borderRadius: 10,
           },
@@ -126,7 +139,7 @@ const _layout = () => {
               <MaterialIcons
                 name="home"
                 size={24}
-                color={focused ? "#0c0d6cff" : "#b9c9ed"}
+                color={focused ? colors.primary : colors.textTertiary}
               />
             );
           },
@@ -136,7 +149,7 @@ const _layout = () => {
         name="attendance"
         options={{
           title: "Attendance",
-          drawerActiveTintColor: "#112990ff",
+          drawerActiveTintColor: colors.primary,
           drawerItemStyle: {
             borderRadius: 10,
           },
@@ -148,7 +161,7 @@ const _layout = () => {
               <FontAwesome6
                 name="calendar-check"
                 size={24}
-                color={focused ? "#0c0d6cff" : "#b9c9ed"}
+                color={focused ? colors.primary : colors.textTertiary}
               />
             );
           },
@@ -158,22 +171,44 @@ const _layout = () => {
         name="meetingLists"
         options={{
           title: "Meeting Lists",
-          drawerActiveTintColor: "#112990ff",
+          drawerActiveTintColor: colors.primary,
           drawerItemStyle: {
             borderRadius: 10,
           },
           headerRight: (props) => {
             return <></>;
           },
-          drawerIcon: ({ focused }) => {
-            return (
-              <FontAwesome6
-                name="calendar-check"
-                size={24}
-                color={focused ? "#0c0d6cff" : "#b9c9ed"}
-              />
-            );
+          // drawerIcon: ({ focused }) => {
+          //   return (
+          //     <FontAwesome6
+          //       name="calendar-check"
+          //       size={24}
+          //       color={focused ? "#0c0d6cff" : "#b9c9ed"}
+          //     />
+          //   );
+          // },
+        }}
+      />
+      <Drawer.Screen
+        name="createMeeting"
+        options={{
+          title: "Create Meeting",
+          drawerActiveTintColor: colors.primary,
+          drawerItemStyle: {
+            borderRadius: 10,
           },
+          headerRight: (props) => {
+            return <></>;
+          },
+          // drawerIcon: ({ focused }) => {
+          //   return (
+          //     <FontAwesome6
+          //       name="calendar-check"
+          //       size={24}
+          //       color={focused ? "#0c0d6cff" : "#b9c9ed"}
+          //     />
+          //   );
+          // },
         }}
       />
     </Drawer>
@@ -183,6 +218,9 @@ const _layout = () => {
 export default _layout;
 
 const styles = StyleSheet.create({
+  drawerContainer: {
+    flex: 1,
+  },
   header: {
     alignItems: "center",
     borderRadius: 10,
@@ -191,6 +229,11 @@ const styles = StyleSheet.create({
     height: 50,
     width: "100%",
     resizeMode: "contain",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 4,
   },
   divider: {
     height: 1,
@@ -204,14 +247,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   activeDrawerItem: {
-    backgroundColor: "#e8f0fe",
     borderLeftWidth: 3,
-    borderLeftColor: "#11257A",
   },
   drawerItemText: {
     fontSize: 16,
     marginLeft: 10,
-    color: "#333",
     fontWeight: "bold",
   },
   sectionHeader: {
@@ -222,11 +262,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 2,
   },
-  sectionHeaderContent: { flexDirection: "row", alignItems: "center" },
+  sectionHeaderContent: { 
+    flexDirection: "row", 
+    alignItems: "center" 
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
     marginLeft: 10,
   },
   subItem: {
@@ -239,15 +281,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   activeSubItem: {
-    backgroundColor: "#e8f0fe",
     borderLeftWidth: 2,
-    borderLeftColor: "#11257A",
   },
-  subItemText: { fontSize: 14, color: "#11257A", marginLeft: 8 },
+  subItemText: { 
+    fontSize: 14, 
+    marginLeft: 8 
+  },
   bottomSection: {
     padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#e6e6e6",
+    // borderTopWidth: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
