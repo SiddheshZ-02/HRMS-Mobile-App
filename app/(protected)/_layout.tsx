@@ -1,5 +1,5 @@
 import { Colors } from "@/constants/Colors";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome5, MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import {
   DrawerContentComponentProps,
@@ -7,7 +7,7 @@ import {
 } from "@react-navigation/drawer";
 import { usePathname, useRouter } from "expo-router";
 import { Drawer } from "expo-router/drawer";
-import React from "react";
+import React, { useState } from "react";
 import {
   Dimensions,
   Image,
@@ -17,16 +17,21 @@ import {
   View,
   useColorScheme,
 } from "react-native";
+import Collapsible from "react-native-collapsible";
 
 const _layout = () => {
+  const [isLeavesCollaps, setIsLeavesCollaps] = useState(true);
+
   const router = useRouter();
   const path = usePathname();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme ?? "light"];
 
   const CustomDrawer = (props: DrawerContentComponentProps) => {
     return (
-      <View style={[styles.drawerContainer, { backgroundColor: colors.background }]}>
+      <View
+        style={[styles.drawerContainer, { backgroundColor: colors.background }]}
+      >
         <DrawerContentScrollView
           {...props}
           contentContainerStyle={{ flexGrow: 1 }}
@@ -37,27 +42,28 @@ const _layout = () => {
               style={styles.logo}
             />
 
-            <Text
-              style={[styles.headerTitle, { color: colors.textPrimary }]}
-            >
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
               HR PORTAL
             </Text>
           </View>
 
-          <View style={[styles.divider,]} />
-          
+          <View style={[styles.divider]} />
+
           <TouchableOpacity
             style={[
               styles.drawerItem,
-              props.state.routeNames[props.state.index] === "index" &&
-                [styles.activeDrawerItem, { 
+              props.state.routeNames[props.state.index] === "index" && [
+                styles.activeDrawerItem,
+                {
                   backgroundColor: colors.surfaceVariant,
-                  borderLeftColor: colors.primary 
-                }],
+                  borderLeftColor: colors.primary,
+                },
+              ],
             ]}
             onPress={() => {
               requestAnimationFrame(() => {
                 router.push("/(protected)");
+                setIsLeavesCollaps(true)
               });
             }}
           >
@@ -71,24 +77,31 @@ const _layout = () => {
                     : colors.textTertiary
                 }
               />
-              <Text style={[styles.drawerItemText, { color: colors.textPrimary }]}>Home</Text>
+              <Text
+                style={[styles.drawerItemText, { color: colors.textPrimary }]}
+              >
+                Home
+              </Text>
             </View>
           </TouchableOpacity>
-          
-          <View style={[styles.divider,]} />
+
+          <View style={[styles.divider]} />
 
           <TouchableOpacity
             style={[
               styles.drawerItem,
-              props.state.routeNames[props.state.index] === "attendance" &&
-                [styles.activeDrawerItem, { 
+              props.state.routeNames[props.state.index] === "attendance" && [
+                styles.activeDrawerItem,
+                {
                   backgroundColor: colors.surfaceVariant,
-                  borderLeftColor: colors.primary 
-                }],
+                  borderLeftColor: colors.primary,
+                },
+              ],
             ]}
             onPress={() => {
               requestAnimationFrame(() => {
                 router.push("/(protected)/attendance");
+                  setIsLeavesCollaps(true)
               });
             }}
           >
@@ -102,11 +115,137 @@ const _layout = () => {
                     : colors.textTertiary
                 }
               />
-              <Text style={[styles.drawerItemText, { color: colors.textPrimary }]}>Attendance</Text>
+              <Text
+                style={[styles.drawerItemText, { color: colors.textPrimary }]}
+              >
+                Attendance
+              </Text>
             </View>
           </TouchableOpacity>
 
           <View style={[styles.divider]} />
+
+          <TouchableOpacity
+            style={[styles.sectionHeader, { borderColor: colors.border }]}
+            onPress={() => {
+              requestAnimationFrame(() => {
+                setIsLeavesCollaps(!isLeavesCollaps);
+                // setIsLeadsCollapsed(true);
+              });
+            }}
+          >
+            <View style={styles.sectionHeaderContent}>
+            
+              <FontAwesome5
+                name="umbrella-beach"
+                size={24}
+                color={isLeavesCollaps ? colors.textTertiary : colors.primary}
+              />
+              <Text
+                style={[styles.sectionTitle, { color: colors.textPrimary }]}
+              >
+                Leave
+              </Text>
+            </View>
+            <MaterialIcons
+              name={isLeavesCollaps ? "expand-more" : "expand-less"}
+              size={24}
+              color={colors.textTertiary}
+            />
+          </TouchableOpacity>
+          <Collapsible collapsed={isLeavesCollaps}>
+            <TouchableOpacity
+              style={[
+                styles.subItem,
+                path === "/holidayLists" && [
+                  styles.activeSubItem,
+                  {
+                    backgroundColor: colors.surfaceVariant,
+                    borderLeftColor: colors.primary,
+                  },
+                ],
+              ]}
+              onPress={() => {
+                requestAnimationFrame(() => {
+                  router.push("/(protected)/holidayLists");
+                });
+              }}
+            >
+
+            
+              <MaterialIcons
+                name="view-list"
+                size={22}
+                color={
+                  path === "/holidayLists"
+                    ? colors.primary
+                    : colors.textTertiary
+                }
+              />
+              <Text style={[styles.subItemText, { color: colors.textPrimary }]}>
+                List Of Holidays
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.subItem,
+                path === "/applyLeave" && [
+                  styles.activeSubItem,
+                  {
+                    backgroundColor: colors.surfaceVariant,
+                    borderLeftColor: colors.primary,
+                  },
+                ],
+              ]}
+              onPress={() => {
+                requestAnimationFrame(() => {
+                  router.push("/(protected)/applyLeave");
+                });
+              }}
+            >
+
+                
+              <MaterialCommunityIcons
+                name="airplane-takeoff"
+                size={22}
+                color={
+                  path === "/applyLeave" ? colors.primary : colors.textTertiary
+                }
+              />
+              <Text style={[styles.subItemText, { color: colors.textPrimary }]}>
+                Apply Leave
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.subItem,
+                path === "/myLeaves" && [
+                  styles.activeSubItem,
+                  {
+                    backgroundColor: colors.surfaceVariant,
+                    borderLeftColor: colors.primary,
+                  },
+                ],
+              ]}
+              onPress={() => {
+                requestAnimationFrame(() => {
+                  router.push("/(protected)/myLeaves");
+                });
+              }}
+            >
+              
+              <FontAwesome5
+                name="calendar-day"
+                size={22}
+                color={
+                  path === "/myLeaves" ? colors.primary : colors.textTertiary
+                }
+              />
+              <Text style={[styles.subItemText, { color: colors.textPrimary }]}>
+                My Leave
+              </Text>
+            </TouchableOpacity>
+          </Collapsible>
         </DrawerContentScrollView>
       </View>
     );
@@ -178,15 +317,6 @@ const _layout = () => {
           headerRight: (props) => {
             return <></>;
           },
-          // drawerIcon: ({ focused }) => {
-          //   return (
-          //     <FontAwesome6
-          //       name="calendar-check"
-          //       size={24}
-          //       color={focused ? "#0c0d6cff" : "#b9c9ed"}
-          //     />
-          //   );
-          // },
         }}
       />
       <Drawer.Screen
@@ -200,15 +330,45 @@ const _layout = () => {
           headerRight: (props) => {
             return <></>;
           },
-          // drawerIcon: ({ focused }) => {
-          //   return (
-          //     <FontAwesome6
-          //       name="calendar-check"
-          //       size={24}
-          //       color={focused ? "#0c0d6cff" : "#b9c9ed"}
-          //     />
-          //   );
-          // },
+        }}
+      />
+      <Drawer.Screen
+        name="holidayLists"
+        options={{
+          title: "Lists of Holidays",
+          drawerActiveTintColor: colors.primary,
+          drawerItemStyle: {
+            borderRadius: 10,
+          },
+          headerRight: (props) => {
+            return <></>;
+          },
+        }}
+      />
+      <Drawer.Screen
+        name="applyLeave"
+        options={{
+          title: "Apply Leave",
+          drawerActiveTintColor: colors.primary,
+          drawerItemStyle: {
+            borderRadius: 10,
+          },
+          headerRight: (props) => {
+            return <></>;
+          },
+        }}
+      />
+      <Drawer.Screen
+        name="myLeaves"
+        options={{
+          title: "My Leave",
+          drawerActiveTintColor: colors.primary,
+          drawerItemStyle: {
+            borderRadius: 10,
+          },
+          headerRight: (props) => {
+            return <></>;
+          },
         }}
       />
     </Drawer>
@@ -262,9 +422,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 2,
   },
-  sectionHeaderContent: { 
-    flexDirection: "row", 
-    alignItems: "center" 
+  sectionHeaderContent: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   sectionTitle: {
     fontSize: 16,
@@ -283,9 +443,9 @@ const styles = StyleSheet.create({
   activeSubItem: {
     borderLeftWidth: 2,
   },
-  subItemText: { 
-    fontSize: 14, 
-    marginLeft: 8 
+  subItemText: {
+    fontSize: 14,
+    marginLeft: 8,
   },
   bottomSection: {
     padding: 10,

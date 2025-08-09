@@ -448,16 +448,16 @@ import { AntDesign, FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-i
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Linking,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useColorScheme
+    ActivityIndicator,
+    Dimensions,
+    Linking,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useColorScheme
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -552,7 +552,7 @@ const index = () => {
           headers: {
             "content-type": "application/json",
             accesstoken:
-              "cm7OTIqgm4tSCEXTDOIUzcxj71qTa7CaASVwwlzrUHYqNJMaX2znMkb4nXvx",
+              "KrYvsz5Ua0uGbaoHfPiknIHBRyVs7T9fnHoq2Vvw634aeS4ydn2gs3qP2IKl",
           },
         }
       );
@@ -579,7 +579,7 @@ const index = () => {
           headers: {
             "content-type": "application/json",
             accesstoken:
-              "cm7OTIqgm4tSCEXTDOIUzcxj71qTa7CaASVwwlzrUHYqNJMaX2znMkb4nXvx",
+              "KrYvsz5Ua0uGbaoHfPiknIHBRyVs7T9fnHoq2Vvw634aeS4ydn2gs3qP2IKl",
           },
         }
       );
@@ -622,13 +622,13 @@ const index = () => {
   // );
 
   const MeetingCard = ({ item, index }: { item: dataType; index: number }) => {
-    const isExpanded = expandedItems[item.meet_id] || false;
+              const isExpanded = expandedItems[item.meet_id] || false;
     const isUpcoming = new Date(item.expected_start_date) > new Date();
 
-    return (
+              return (
       <View style={[styles.meetingCard, { backgroundColor: colors.surface }]}>
-        <View style={styles.meetingRow}>
-          <View style={styles.meetingDetails}>
+                  <View style={styles.meetingRow}>
+                    <View style={styles.meetingDetails}>
             <View style={styles.meetingTitleRow}>
               <MaterialIcons
                 name="event"
@@ -640,36 +640,36 @@ const index = () => {
               </Text>
             </View>
             <Text style={[styles.meetingDescription, { color: colors.textSecondary }]}>
-              {/* {item.description} */}
+                        {/* {item.description} */}
               Process flow performance management
-            </Text>
-          </View>
-          <View style={styles.rightSection}>
+                      </Text>
+                    </View>
+                    <View style={styles.rightSection}>
             <Text style={[styles.meetingDate, { color: colors.textTertiary }]}>
               {/* {new Date(item.expected_start_date).toLocaleDateString()} */}
-              {item.expected_start_date}
-            </Text>
-            <TouchableOpacity
-              onPress={() => {
-                if (item.url) Linking.openURL(item.url);
-              }}
+                        {item.expected_start_date}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (item.url) Linking.openURL(item.url);
+                        }}
               style={[styles.linkButton, { backgroundColor: BrandColors.primary }]}
-            >
-              <Text style={styles.linkButtonText}>Join</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                      >
+                        <Text style={styles.linkButtonText}>Join</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
         {item.employee_id.length > 0 && (
-          <TouchableOpacity
-            style={styles.dropdownHeader}
-            onPress={() => toggleDropdown(item.meet_id)}
-          >
+                  <TouchableOpacity
+                    style={styles.dropdownHeader}
+                    onPress={() => toggleDropdown(item.meet_id)}
+                  >
             <Text style={[styles.employeeTitle, { color: colors.textSecondary }]}>
               {item.employee_id.length} Participants
             </Text>
-            <MaterialIcons
-              name={isExpanded ? "expand-less" : "expand-more"}
-              size={20}
+                      <MaterialIcons
+                        name={isExpanded ? "expand-less" : "expand-more"}
+                        size={20}
               color={colors.textTertiary}
             />
           </TouchableOpacity>
@@ -685,7 +685,7 @@ const index = () => {
                 </View>
                 <Text style={[styles.employeeName, { color: colors.textPrimary }]}>
                   {emp.firstname} {emp.lastname}
-                </Text>
+                      </Text>
               </View>
             ))}
           </View>
@@ -712,8 +712,8 @@ const index = () => {
           <Text style={[styles.linkButtonText, { color: BrandColors.warning }]}>Holiday</Text>
         </View>
       </View>
-    </View>
-  );
+                </View>
+              );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -729,7 +729,7 @@ const index = () => {
 
         {/* Meeting Section */}
         <View style={styles.sectionWrapper}>
-          <View style={[styles.sectionHeader, { backgroundColor: colors.surfaceVariant }]}>
+          <View style={[styles.sectionHeader, { backgroundColor: colors.surface }]}>
             <View style={styles.headerLeft}>
               <View style={[styles.sectionIcon, { backgroundColor: BrandColors.primary + '15' }]}>
                 <MaterialIcons name="event" size={20} color={BrandColors.primary} />
@@ -749,13 +749,13 @@ const index = () => {
               <AntDesign name="right" size={14} color={BrandColors.primary} />
             </TouchableOpacity>
           </View>
-          <View style={styles.sectionBody}>
+          <View style={[styles.sectionBody,{ backgroundColor: colors.surfaceVariant }]}>
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={BrandColors.primary} />
                 <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
                   Loading meetings...
-                </Text>
+              </Text>
               </View>
             ) : error ? (
               <View style={styles.errorContainer}>
@@ -765,7 +765,7 @@ const index = () => {
                   style={[styles.retryButton, { backgroundColor: BrandColors.primary }]}
                 >
                   <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
+            </TouchableOpacity>
               </View>
             ) : data.length === 0 ? (
               <View style={styles.emptyState}>
@@ -794,38 +794,38 @@ const index = () => {
               </View>
             )}
           </View>
-        </View>
+      </View>
 
-        {/* Holiday Section */}
-        <View style={styles.sectionWrapper}>
-          <View style={[styles.sectionHeader, { backgroundColor: colors.surfaceVariant }]}>
-            <View style={styles.headerLeft}>
+      {/* Holiday Section */}
+      <View style={styles.sectionWrapper}>
+          <View style={[styles.sectionHeader, { backgroundColor: colors.surface }]}>
+          <View style={styles.headerLeft}>
               <View style={[styles.sectionIcon, { backgroundColor: BrandColors.warning + '15' }]}>
                 <FontAwesome5 name="calendar-day" size={20} color={BrandColors.warning} />
               </View>
               <View>
                 <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Holidays</Text>
                 <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>
-                  {holiday.length} holidays this year
+                  {holiday.length} holidays this month
                 </Text>
               </View>
-            </View>
+          </View>
             <TouchableOpacity
-              // onPress={() => router.push("/(protected)/holidayLists")}
+              onPress={() => router.push("/(protected)/holidayLists")}
               style={styles.viewAllButton}
             >
               <Text style={[styles.viewAllText, { color: BrandColors.primary }]}>View all</Text>
               <AntDesign name="right" size={14} color={BrandColors.primary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.sectionBody}>
+          </TouchableOpacity>
+        </View>
+          <View style={[styles.sectionBody,{ backgroundColor: colors.surfaceVariant }] }>
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={BrandColors.primary} />
                 <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
                   Loading holidays...
-                </Text>
-              </View>
+                    </Text>
+                  </View>
             ) : error ? (
               <View style={styles.errorContainer}>
                 <Text style={[styles.errorText, { color: colors.textPrimary }]}>{error}</Text>
@@ -835,7 +835,7 @@ const index = () => {
                 >
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
-              </View>
+                    </View>
             ) : holiday.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="sunny-outline" size={48} color={colors.textTertiary} />
@@ -843,28 +843,28 @@ const index = () => {
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                   No holidays scheduled for this period
                 </Text>
-              </View>
+                  </View>
             ) : (
               <View style={styles.cardsContainer}>
                 {holiday.slice(0, 3).map((item) => (
                   <HolidayCard key={item.id} item={item} />
                 ))}
                 {holiday.length > 3 && (
-                  <TouchableOpacity
+            <TouchableOpacity
                     // onPress={() => router.push("/(protected)/holidayLists")}
                     style={styles.viewMoreButton}
-                  >
+            >
                     <Text style={[styles.viewMoreText, { color: BrandColors.primary }]}>
                       View {holiday.length - 3} more holidays
-                    </Text>
+              </Text>
                     <AntDesign name="doubleright" size={14} color={BrandColors.primary} />
-                  </TouchableOpacity>
+            </TouchableOpacity>
                 )}
               </View>
-            )}
+          )}
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
     </View>
   );
 };

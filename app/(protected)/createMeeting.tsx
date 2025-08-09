@@ -1,8 +1,10 @@
 import { FontAwesome } from "@expo/vector-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,9 +12,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 import { AutocompleteDropdown } from "react-native-autocomplete-dropdown";
 import { DatePickerModal, TimePickerModal } from "react-native-paper-dates";
+import { Colors } from "../../constants/Colors";
 // import ScreenWrapper from "@/components/ScreenWrapper";
 
 const { height, width } = Dimensions.get("window");
@@ -60,6 +64,8 @@ interface selectType {
 }
 
 const createMeeting = () => {
+  const scheme = useColorScheme();
+  const colors = Colors[scheme ?? 'light'];
   const dimensions = getResponsiveDimensions();
   const scrollViewRef = useRef<ScrollView>(null);
   const clientDropdownController = useRef<any>(null);
@@ -70,7 +76,7 @@ const createMeeting = () => {
     handleSubmit,
     formState: { errors },
     setValue,
-    reset
+    reset,
   } = useForm<MeetingFormType>({
     defaultValues: {
       client: "",
@@ -92,11 +98,28 @@ const createMeeting = () => {
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<emplyoeeType[]>([]);
-  const [employeesSuggestions, setEmployeesSuggestions] = useState<selectType[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<selectType | null>( null);
+  const [employeesIndex, setEmployeesIndex] = useState<
+    Array<{ id: string; title: string; searchKey: string }>
+  >([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<selectType | null>(
+    null
+  );
   const [selectedEmployees, setSelectedEmployees] = useState<selectType[]>([]);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState<string>("");
+  const [isEmployeeInputFocused, setIsEmployeeInputFocused] =
+    useState<boolean>(false);
 
-  const [clientsSuggestions, setClientsSuggestions] = useState<selectType[]>([]);
+  const openEmployeeDropdown = useCallback(() => {
+    setIsEmployeeInputFocused(true);
+    setEmployeeSearchQuery("");
+    try {
+      employeeDropdownController.current?.open?.();
+    } catch {}
+  }, []);
+
+  const [clientsSuggestions, setClientsSuggestions] = useState<selectType[]>(
+    []
+  );
   const [clients, setClients] = useState<clientsType[]>([]);
   const [selectedClient, setSelectedClient] = useState<selectType | null>(null);
   const [clientLoading, setClientLoading] = useState(false);
@@ -159,21 +182,22 @@ const createMeeting = () => {
         {
           method: "GET",
           headers: {
-            "content-type": "Application/json",
-            accesstoken:
-              "cm7OTIqgm4tSCEXTDOIUzcxj71qTa7CaASVwwlzrUHYqNJMaX2znMkb4nXvx",
+            "Content-Type": "application/json",
+            accessToken:
+              "KrYvsz5Ua0uGbaoHfPiknIHBRyVs7T9fnHoq2Vvw634aeS4ydn2gs3qP2IKl",
           },
         }
       );
       const res = await response.json();
       const employeesData: any[] = Array.isArray(res) ? res : [];
       setEmployees(employeesData as emplyoeeType[]);
-      setEmployeesSuggestions(
-        employeesData.map((emp: any, idx: number) => ({
-          id: (emp?.id ?? emp?.employee_id ?? idx).toString(),
-          title: `${emp?.firstname ?? ""} ${emp?.lastname ?? ""}`.trim(),
-        }))
-      );
+      const index = employeesData.map((emp: any, idx: number) => {
+        const id = (emp?.id ?? emp?.employee_id ?? idx).toString();
+        const title = `${emp?.firstname ?? ""} ${emp?.lastname ?? ""}`.trim();
+        const searchKey = title.toLowerCase();
+        return { id, title, searchKey };
+      });
+      setEmployeesIndex(index);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -192,7 +216,7 @@ const createMeeting = () => {
           headers: {
             "Content-Type": "application/json",
             accessToken:
-              "cm7OTIqgm4tSCEXTDOIUzcxj71qTa7CaASVwwlzrUHYqNJMaX2znMkb4nXvx",
+              "KrYvsz5Ua0uGbaoHfPiknIHBRyVs7T9fnHoq2Vvw634aeS4ydn2gs3qP2IKl",
           },
         }
       );
@@ -247,35 +271,19 @@ const createMeeting = () => {
     [clients]
   );
 
-  const filterEmployeeSuggestions = useCallback(
-    (query: string) => {
-      if (!query || query.length < 1) {
-        const all = employees.map((emp, idx) => ({
-          id: ((emp as any)?.id ?? (emp as any)?.employee_id ?? idx).toString(),
-          title: `${(emp as any)?.firstname ?? ""} ${
-            (emp as any)?.lastname ?? ""
-          }`.trim(),
-        }));
-        setEmployeesSuggestions(all);
-        return;
-      }
+  const employeeDataSet = useMemo(() => {
+    const query = employeeSearchQuery.trim().toLowerCase();
+    const base = employeesIndex;
+    const filtered = query
+      ? base.filter((e) => e.searchKey.includes(query))
+      : base;
+    // Limit to avoid rendering too many rows at once
+    return filtered.slice(0, 100).map(({ id, title }) => ({ id, title }));
+  }, [employeesIndex, employeeSearchQuery]);
 
-      const filtered = employees
-        .filter((emp) =>
-          `${(emp as any)?.firstname ?? ""} ${(emp as any)?.lastname ?? ""}`
-            .toLowerCase()
-            .includes(query.toLowerCase())
-        )
-        .map((emp, idx) => ({
-          id: ((emp as any)?.id ?? (emp as any)?.employee_id ?? idx).toString(),
-          title: `${(emp as any)?.firstname ?? ""} ${
-            (emp as any)?.lastname ?? ""
-          }`.trim(),
-        }));
-      setEmployeesSuggestions(filtered);
-    },
-    [employees]
-  );
+  const employeeListWithHeader = useMemo(() => {
+    return [{ id: "__header__", title: "__header__" }, ...employeeDataSet];
+  }, [employeeDataSet]);
 
   const handleEmployeeSelection = useCallback(
     (item: any) => {
@@ -314,13 +322,14 @@ const createMeeting = () => {
 
   const onSubmit = useCallback((data: MeetingFormType) => {
     console.log("Meeting scheduled:", data);
-    reset()
+    reset();
       if (clientDropdownController.current) {
         clientDropdownController.current.clear();
       }
       if (employeeDropdownController.current) {
         employeeDropdownController.current.clear();
       }
+    setEmployeeSearchQuery("");
     // Add API call or further logic here
   }, []);
 
@@ -349,6 +358,7 @@ const createMeeting = () => {
       if (employeeDropdownController.current) {
         employeeDropdownController.current.clear();
       }
+      setEmployeeSearchQuery("");
 
       // Refresh data
       await Promise.all([fetchClients(), fetchEmployee()]);
@@ -359,25 +369,26 @@ const createMeeting = () => {
     }
   }, [setValue]);
 
+  // --- STYLES ---
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: "#f1f3f6",
+      backgroundColor: colors.background,
     },
     header: {
-      backgroundColor: "#4a90e2",
+      backgroundColor: colors.primary,
       paddingVertical: dimensions.padding,
       paddingHorizontal: dimensions.padding,
       borderBottomLeftRadius: 20,
       borderBottomRightRadius: 20,
-      shadowColor: "#000",
+      shadowColor: colors.cardShadow,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.1,
       shadowRadius: 6,
       elevation: 6,
     },
     headerText: {
-      color: "#fff",
+      color: colors.textInverse,
       fontSize: dimensions.fontSize.title + 2,
       fontWeight: "bold",
       textAlign: "center",
@@ -385,9 +396,9 @@ const createMeeting = () => {
     formWrapper: {
       margin: dimensions.padding,
       padding: dimensions.padding,
-      backgroundColor: "#ffffff",
+      backgroundColor: colors.surface,
       borderRadius: 12,
-      shadowColor: "#000",
+      shadowColor: colors.cardShadow,
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.1,
       shadowRadius: 6,
@@ -399,35 +410,36 @@ const createMeeting = () => {
     fieldLabel: {
       fontSize: dimensions.fontSize.body,
       fontWeight: "500",
-      color: "#34495e",
+      color: colors.textPrimary,
       marginBottom: 6,
     },
     label: {
       fontSize: dimensions.fontSize.body,
       fontWeight: "500",
-      color: "#34495e",
+      color: colors.textPrimary,
       marginBottom: 6,
     },
     input: {
       borderWidth: 1,
-      borderColor: "#ccc",
+      borderColor: colors.border,
       borderRadius: 8,
       paddingHorizontal: 12,
       height: dimensions.inputHeight,
-      backgroundColor: "#fff",
+      backgroundColor: colors.surface,
       fontSize: dimensions.fontSize.body,
-      color: "#000000",
+      color: colors.textPrimary,
     },
     textarea: {
       borderWidth: 1,
-      borderColor: "#ccc",
+      borderColor: colors.border,
       borderRadius: 8,
       paddingHorizontal: 12,
       paddingVertical: 8,
       fontSize: dimensions.fontSize.body,
       height: 100,
       textAlignVertical: "top",
-      backgroundColor: "#fff",
+      backgroundColor: colors.surface,
+      color: colors.textPrimary,
     },
     dateTimeContainer: {
       flexDirection: "row",
@@ -437,28 +449,29 @@ const createMeeting = () => {
     dateTimeInput: {
       flex: 1,
       borderWidth: 1,
-      borderColor: "#ccc",
+      borderColor: colors.border,
       borderRadius: 8,
       paddingHorizontal: 12,
       height: dimensions.inputHeight,
       fontSize: dimensions.fontSize.body,
-      backgroundColor: "#fff",
+      backgroundColor: colors.surface,
+      color: colors.textPrimary,
     },
     dateIcon: {
       marginLeft: 10,
       padding: 6,
-      backgroundColor: "#eee",
+      backgroundColor: colors.surfaceVariant,
       borderRadius: 6,
     },
     createButton: {
-      backgroundColor: "#4a90e2",
+      backgroundColor: colors.primary,
       paddingVertical: 14,
       borderRadius: 10,
       alignItems: "center",
       marginTop: dimensions.padding,
     },
     createButtonText: {
-      color: "white",
+      color: colors.buttonText,
       fontSize: dimensions.fontSize.body + 1,
       fontWeight: "bold",
       letterSpacing: 0.5,
@@ -470,13 +483,13 @@ const createMeeting = () => {
     },
     dropdownInputContainer: {
       borderWidth: 1,
-      borderColor: "#ccc",
+      borderColor: colors.border,
       borderRadius: 8,
-      backgroundColor: "#fff",
+      backgroundColor: colors.surface,
     },
     dropdownInput: {
       fontSize: dimensions.fontSize.body,
-      color: "#000000",
+      color: colors.textPrimary,
     },
     dropdownRightButtonsContainer: {
       right: 8,
@@ -485,9 +498,9 @@ const createMeeting = () => {
       alignSelf: "center",
     },
     dropdownSuggestionsContainer: {
-      backgroundColor: "#fff",
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: "#ccc",
+      borderColor: colors.border,
       borderRadius: 8,
       marginTop: 4,
       zIndex: 1000,
@@ -496,14 +509,14 @@ const createMeeting = () => {
     dropdownItemContainer: {
       padding: 15,
       borderBottomWidth: 1,
-      borderBottomColor: "#f0f0f0",
+      borderBottomColor: colors.border,
     },
     dropdownItemText: {
       fontSize: dimensions.fontSize.body,
-      color: "#000000",
+      color: colors.textPrimary,
     },
     errorText: {
-      color: "red",
+      color: colors.error,
       fontSize: dimensions.fontSize.small,
       marginTop: 4,
     },
@@ -515,394 +528,436 @@ const createMeeting = () => {
       width: 20,
       height: 20,
       borderWidth: 2,
-      borderColor: "#ccc",
+      borderColor: colors.border,
       borderRadius: 4,
       marginRight: 12,
       alignItems: "center",
       justifyContent: "center",
     },
     checkboxSelected: {
-      backgroundColor: "#4a90e2",
-      borderColor: "#4a90e2",
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
   });
   return (
-    <View style={{ flex: 1 }}>
-      {/* // <ScreenWrapper scrollable={false}> */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.container}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#4a90e2"]}
-            tintColor="#4a90e2"
-          />
-        }
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Schedule Meeting</Text>
-        </View>
-        <View style={styles.formWrapper}>
-          {/* Client */}
-          <View style={[styles.fieldContainer, { zIndex: 3 }]}>
-            <Text style={styles.fieldLabel}>Client</Text>
-            <Controller
-              control={control}
-              name="client"
-              rules={{ required: "Client is required" }}
-              render={({ field: { onChange, value } }) => (
-                <AutocompleteDropdown
-                  controller={(controller) => {
-                    clientDropdownController.current = controller;
-                  }}
-                  dataSet={clientsSuggestions}
-                  onChangeText={filterClientSuggestions}
-                  onSelectItem={(item) => {
-                    if (item && item.title) {
-                      setSelectedClient({ id: item.id, title: item.title });
-                      onChange(item.title);
-                    } else {
-                      setSelectedClient(null);
-                      onChange("");
+        {/* // <ScreenWrapper scrollable={false}> */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.container}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={{ paddingBottom: 32 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerText}>Schedule Meeting</Text>
+          </View>
+          <View style={styles.formWrapper}>
+            {/* Client */}
+            <View style={[styles.fieldContainer, { zIndex: 3 }]}>
+              <Text style={styles.fieldLabel}>Client</Text>
+              <Controller
+                control={control}
+                name="client"
+                rules={{ required: "Client is required" }}
+                render={({ field: { onChange, value } }) => (
+                  <AutocompleteDropdown
+                    controller={(controller) => {
+                      clientDropdownController.current = controller;
+                    }}
+                    dataSet={clientsSuggestions}
+                    onChangeText={filterClientSuggestions}
+                    onSelectItem={(item) => {
+                      if (item && item.title) {
+                        setSelectedClient({ id: item.id, title: item.title });
+                        onChange(item.title);
+                      } else {
+                        setSelectedClient(null);
+                        onChange("");
+                      }
+                    }}
+                    debounce={300}
+                    suggestionsListMaxHeight={
+                      Dimensions.get("window").height * 0.4
                     }
-                  }}
-                  debounce={300}
-                  suggestionsListMaxHeight={
-                    Dimensions.get("window").height * 0.4
-                  }
-                  loading={clientLoading}
-                  useFilter={false}
-                  textInputProps={{
-                    placeholder: "Select a client",
-                    autoCorrect: false,
-                    autoCapitalize: "none",
-                    style: styles.dropdownInput,
-                    onFocus: () => {
-                      const allSuggestions = clients.map((c) => ({
-                        id: c.id.toString(),
-                        title: c.client_name,
-                      }));
-                      setClientsSuggestions(allSuggestions);
-                      try {
-                        clientDropdownController.current?.open?.();
-                      } catch {}
-                    },
-                  }}
-                  rightButtonsContainerStyle={
-                    styles.dropdownRightButtonsContainer
-                  }
-                  inputContainerStyle={styles.dropdownInputContainer}
-                  suggestionsListContainerStyle={
-                    styles.dropdownSuggestionsContainer
-                  }
-                  containerStyle={styles.dropdownContainer}
-                  direction="down"
-                  renderItem={(item) => (
-                    <View style={styles.dropdownItemContainer}>
-                      <Text style={styles.dropdownItemText}>{item.title}</Text>
-                    </View>
-                  )}
-                  inputHeight={dimensions.inputHeight}
-                  showChevron={true}
-                  closeOnBlur={true}
-                  clearOnFocus={false}
-                  initialValue={
-                    selectedClient ? { id: selectedClient.id } : undefined
-                  }
-                />
-              )}
-            />
-            {errors.client && (
-              <Text style={styles.errorText}>{errors.client.message}</Text>
-            )}
-          </View>
-
-          {/* Title and Meeting Link */}
-          {/* <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
-          > */}
-          <View style={[styles.fieldContainer, { flex: 1 }]}>
-            <Text style={styles.label}>Title : *</Text>
-            <Controller
-              control={control}
-              name="title"
-              rules={{ required: "Title is required" }}
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Daily review"
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {errors.title && (
-              <Text style={{ color: "red" }}>{errors.title.message}</Text>
-            )}
-          </View>
-          <View style={[styles.fieldContainer, { flex: 1 }]}>
-            <Text style={styles.label}>Meeting Link : *</Text>
-            <Controller
-              control={control}
-              name="meetingLink"
-              rules={{ required: "Meeting link is required" }}
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  placeholder="https://teams.actify.com"
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {errors.meetingLink && (
-              <Text style={{ color: "red" }}>{errors.meetingLink.message}</Text>
-            )}
-          </View>
-          {/* </View> */}
-
-          {/* Employee */}
-          <View style={[styles.fieldContainer, { zIndex: 3 }]}>
-            <Text style={styles.label}>Employee : *</Text>
-            <Controller
-              control={control}
-              name="employee"
-              rules={{ required: "Employee is required" }}
-              render={({ field: { onChange, value } }) => (
-                <AutocompleteDropdown
-                  controller={(controller) => {
-                    employeeDropdownController.current = controller;
-                  }}
-                  dataSet={employeesSuggestions}
-                  onChangeText={filterEmployeeSuggestions}
-                  onSelectItem={(item) => {
-                    if (item && item.title) {
-                      handleEmployeeSelection(item);
+                    loading={clientLoading}
+                    useFilter={false}
+                    textInputProps={{
+                      placeholder: "Select a client",
+                      placeholderTextColor: colors.textTertiary,
+                      autoCorrect: false,
+                      autoCapitalize: "none",
+                      style: styles.dropdownInput,
+                      onFocus: () => {
+                        const allSuggestions = clients.map((c) => ({
+                          id: c.id.toString(),
+                          title: c.client_name,
+                        }));
+                        setClientsSuggestions(allSuggestions);
+                        try {
+                          clientDropdownController.current?.open?.();
+                        } catch {}
+                      },
+                    }}
+                    rightButtonsContainerStyle={
+                      styles.dropdownRightButtonsContainer
                     }
-                  }}
-                  debounce={300}
-                  suggestionsListMaxHeight={
-                    Dimensions.get("window").height * 0.4
-                  }
-                  loading={employeeLoading}
-                  useFilter={false}
-                  textInputProps={{
-                    placeholder: "Select employees",
-                    autoCorrect: false,
-                    autoCapitalize: "none",
-                    style: styles.dropdownInput,
-                    value: getSelectedEmployeeText(),
-                    onFocus: () => {
-                      const all = employees.map((emp, idx) => ({
-                        id: (
-                          (emp as any)?.id ??
-                          (emp as any)?.employee_id ??
-                          idx
-                        ).toString(),
-                        title: `${(emp as any)?.firstname ?? ""} ${
-                          (emp as any)?.lastname ?? ""
-                        }`.trim(),
-                      }));
-                      setEmployeesSuggestions(all);
-                      try {
-                        employeeDropdownController.current?.open?.();
-                      } catch {}
-                    },
-                  }}
-                  rightButtonsContainerStyle={
-                    styles.dropdownRightButtonsContainer
-                  }
-                  inputContainerStyle={styles.dropdownInputContainer}
-                  suggestionsListContainerStyle={
-                    styles.dropdownSuggestionsContainer
-                  }
-                  containerStyle={styles.dropdownContainer}
-                  direction="down"
-                  renderItem={(item) => {
-                    const isSelected = selectedEmployees.some(
-                      (emp) => emp.id === item.id
-                    );
-                    return (
-                      <TouchableOpacity
-                        style={styles.dropdownItemContainer}
-                        onPress={() => handleEmployeeSelection(item)}
-                      >
-                        <View style={styles.checkboxContainer}>
+                    inputContainerStyle={styles.dropdownInputContainer}
+                    suggestionsListContainerStyle={
+                      styles.dropdownSuggestionsContainer
+                    }
+                    containerStyle={styles.dropdownContainer}
+                    direction="down"
+                    renderItem={(item) => (
+                      <View style={styles.dropdownItemContainer}>
+                        <Text style={styles.dropdownItemText}>{item.title}</Text>
+                      </View>
+                    )}
+                    inputHeight={dimensions.inputHeight}
+                    showChevron={true}
+                    closeOnBlur={true}
+                    clearOnFocus={false}
+                    initialValue={
+                      selectedClient ? { id: selectedClient.id } : undefined
+                    }
+                  />
+                )}
+              />
+              {errors.client && (
+                <Text style={styles.errorText}>{errors.client.message}</Text>
+              )}
+            </View>
+
+            {/* Title and Meeting Link */}
+            {/* <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            > */}
+            <View style={[styles.fieldContainer, { flex: 1 }]}>
+              <Text style={styles.label}>Title : *</Text>
+              <Controller
+                control={control}
+                name="title"
+                rules={{ required: "Title is required" }}
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Daily review"
+                    placeholderTextColor={colors.textTertiary}
+                    // placeholderTextColor={}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
+              />
+              {errors.title && (
+                <Text style={{ color: colors.error }}>{errors.title.message}</Text>
+              )}
+            </View>
+            <View style={[styles.fieldContainer, { flex: 1 }]}>
+              <Text style={styles.label}>Meeting Link : *</Text>
+              <Controller
+                control={control}
+                name="meetingLink"
+                rules={{ required: "Meeting link is required" }}
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="https://teams.actify.com"
+                    placeholderTextColor={colors.textTertiary}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
+              />
+              {errors.meetingLink && (
+                <Text style={{ color: colors.error }}>{errors.meetingLink.message}</Text>
+              )}
+            </View>
+            {/* </View> */}
+
+            {/* Employee */}
+            <View style={[styles.fieldContainer, { zIndex: 3 }]}>
+              <Text style={styles.label}>Employee : *</Text>
+              <Controller
+                control={control}
+                name="employee"
+                rules={{ required: "Employee is required" }}
+                render={({ field: { onChange, value } }) => (
+                  <AutocompleteDropdown
+                    controller={(controller) => {
+                      employeeDropdownController.current = controller;
+                    }}
+                    dataSet={employeeListWithHeader}
+                    onChangeText={(text) => {
+                      setEmployeeSearchQuery(text ?? "");
+                    }}
+                    onSelectItem={() => {}}
+                    debounce={300}
+                    suggestionsListMaxHeight={
+                      Dimensions.get("window").height * 0.4
+                    }
+                    loading={employeeLoading}
+                    useFilter={false}
+                    textInputProps={{
+                      placeholder: "Select employees",
+                      placeholderTextColor: colors.textTertiary,
+                      autoCorrect: false,
+                      autoCapitalize: "none",
+                      style: styles.dropdownInput,
+                      value: isEmployeeInputFocused
+                        ? employeeSearchQuery
+                        : getSelectedEmployeeText(),
+                      editable: true,
+                      onPressIn: () => {
+                        openEmployeeDropdown();
+                      },
+                      onFocus: () => {
+                        openEmployeeDropdown();
+                      },
+                      onBlur: () => {
+                        setIsEmployeeInputFocused(false);
+                      },
+                    }}
+                    rightButtonsContainerStyle={
+                      styles.dropdownRightButtonsContainer
+                    }
+                    inputContainerStyle={styles.dropdownInputContainer}
+                    suggestionsListContainerStyle={
+                      styles.dropdownSuggestionsContainer
+                    }
+                    containerStyle={styles.dropdownContainer}
+                    direction="down"
+                    renderItem={(item) => {
+                      if (item.id === "__header__") {
+                        return (
                           <View
                             style={[
-                              styles.checkbox,
-                              isSelected && styles.checkboxSelected,
+                              styles.dropdownItemContainer,
+                              { paddingVertical: 10 },
                             ]}
                           >
-                            {isSelected && (
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                borderRadius: 8,
+                                paddingHorizontal: 12,
+                                height: 40,
+                                backgroundColor: colors.surfaceVariant,
+                              }}
+                            >
                               <FontAwesome
-                                name="check"
-                                size={12}
-                                color="#fff"
+                                name="search"
+                                size={16}
+                                color={colors.textPrimary}
                               />
-                            )}
+                              <TextInput
+                                style={{ marginLeft: 8, flex: 1, color: colors.textPrimary }}
+                                placeholder="Search employees"
+                                placeholderTextColor={colors.textTertiary}
+                                value={employeeSearchQuery}
+                                onChangeText={setEmployeeSearchQuery}
+                                autoFocus
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                              />
+                            </View>
                           </View>
-                          <Text style={styles.dropdownItemText}>
-                            {item.title}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  }}
-                  inputHeight={dimensions.inputHeight}
-                  showChevron={true}
-                  closeOnBlur={false}
-                  clearOnFocus={false}
-                />
-              )}
-            />
-            {errors.employee && (
-              <Text style={{ color: "red" }}>{errors.employee.message}</Text>
-            )}
-          </View>
-
-          {/* Start Date & Time and End Date & Time */}
-          <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
-          >
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.label}>Start date & time : *</Text>
-              <Controller
-                control={control}
-                name="startDate"
-                rules={{ required: "Start date is required" }}
-                render={({ field: { value } }) => (
-                  <View style={styles.dateTimeContainer}>
-                    <TouchableOpacity
-                      onPress={() => setShowStartDatePicker(true)}
-                    >
-                      <TextInput
-                        style={styles.dateTimeInput}
-                        value={formatDate(value)}
-                        editable={false}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dateIcon}>
-                      <FontAwesome name="calendar" size={20} color="#000" />
-                    </TouchableOpacity>
-                  </View>
+                        );
+                      }
+                      const isSelected = selectedEmployees.some(
+                        (emp) => emp.id === item.id
+                      );
+                      return (
+                        <TouchableOpacity
+                          style={styles.dropdownItemContainer}
+                          onPress={() => handleEmployeeSelection(item)}
+                        >
+                          <View style={styles.checkboxContainer}>
+                            <View
+                              style={[
+                                styles.checkbox,
+                                isSelected && styles.checkboxSelected,
+                              ]}
+                            >
+                              {isSelected && (
+                                <FontAwesome
+                                  name="check"
+                                  size={12}
+                                  color={colors.primary}
+                                />
+                              )}
+                            </View>
+                            <Text style={styles.dropdownItemText}>
+                              {item.title}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    }}
+                    inputHeight={dimensions.inputHeight}
+                    showChevron={false}
+                    closeOnBlur={false}
+                    clearOnFocus={false}
+                    initialValue={
+                      selectedEmployee ? { id: selectedEmployee.id } : undefined
+                    }
+                  />
                 )}
               />
-              {errors.startDate && (
-                <Text style={{ color: "red" }}>{errors.startDate.message}</Text>
+              {errors.employee && (
+                <Text style={{ color: colors.error }}>{errors.employee.message}</Text>
               )}
-              <Controller
-                control={control}
-                name="startTime"
-                rules={{ required: "Start time is required" }}
-                render={({ field: { value } }) => (
+            </View>
+
+            {/* Start Date & Time and End Date & Time */}
+
+            <View style={{ flex: 1, marginRight: 8, marginBottom: 8 }}>
+              <Text style={styles.label}>Start date : *</Text>
+                <Controller
+                  control={control}
+                  name="startDate"
+                  rules={{ required: "Start date is required" }}
+                  render={({ field: { value } }) => (
                   <View style={[styles.dateTimeContainer]}>
-                    <TouchableOpacity
-                      onPress={() => setShowStartTimePicker(true)}
-                    >
-                      <TextInput
-                        style={[styles.dateTimeInput]}
-                        value={value || "--:--"}
-                        editable={false}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setShowStartTimePicker(true)}
-                      style={styles.dateIcon}
-                    >
-                      <FontAwesome name="clock-o" size={20} color="#000" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              />
-              {errors.startTime && (
-                <Text style={{ color: "red" }}>{errors.startTime.message}</Text>
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>End date & time : *</Text>
-              <Controller
-                control={control}
-                name="endDate"
-                rules={{ required: "End date is required" }}
-                render={({ field: { value } }) => (
-                  <View style={styles.dateTimeContainer}>
-                    <TouchableOpacity
-                      onPress={() => setShowEndDatePicker(true)}
-                    >
-                      <TextInput
-                        style={styles.dateTimeInput}
-                        value={formatDate(value)}
-                        editable={false}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dateIcon}>
-                      <FontAwesome name="calendar" size={20} color="#000" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              />
-              {errors.endDate && (
-                <Text style={{ color: "red" }}>{errors.endDate.message}</Text>
-              )}
-              <Controller
-                control={control}
-                name="endTime"
-                rules={{ required: "End time is required" }}
-                render={({ field: { value } }) => (
-                  <View style={styles.dateTimeContainer}>
-                    <TouchableOpacity
-                      onPress={() => setShowEndTimePicker(true)}
-                    >
-                      <TextInput
-                        style={styles.dateTimeInput}
-                        value={value || "--:--"}
-                        editable={false}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dateIcon}>
-                      <FontAwesome name="clock-o" size={20} color="#000" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              />
-              {errors.endTime && (
-                <Text style={{ color: "red" }}>{errors.endTime.message}</Text>
-              )}
-            </View>
-          </View>
-
-          {/* Description */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Description :</Text>
-            <Controller
-              control={control}
-              name="description"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.textarea}
-                  placeholder="Enter description"
-                  onChangeText={onChange}
-                  value={value}
-                  multiline
+                      <TouchableOpacity
+                        onPress={() => setShowStartDatePicker(true)}
+                      >
+                        <TextInput
+                        style={[styles.dateTimeInput, { width: width * 0.7 }]}
+                          value={formatDate(value)}
+                          editable={false}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.dateIcon}>
+                        <FontAwesome name="calendar" size={20} color={colors.textPrimary} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 />
+                {errors.startDate && (
+                <Text style={{ color: colors.error }}>{errors.startDate.message}</Text>
               )}
-            />
+            </View>
+
+            <View
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                gap: 6,
+                marginBottom:8
+              }}
+            >
+              <View>
+                <Text style={styles.label}>Start Time : *</Text>
+                <Controller
+                  control={control}
+                  name="startTime"
+                  rules={{ required: "Start time is required" }}
+                  render={({ field: { value } }) => (
+                    <View style={[styles.dateTimeContainer]}>
+                      <TouchableOpacity
+                        onPress={() => setShowStartTimePicker(true)}
+                      >
+                        <TextInput
+                          style={[styles.dateTimeInput, { width: width * 0.3 }]}
+                          value={value || "--:--"}
+                          editable={false}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setShowStartTimePicker(true)}
+                        style={styles.dateIcon}
+                      >
+                        <FontAwesome name="clock-o" size={20} color={colors.textPrimary} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+                {errors.startTime && (
+                  <Text style={{ color: colors.error }}>{errors.startTime.message}</Text>
+                )}
+              </View>
+              <View>
+                <Text style={styles.label}>End Time : *</Text>
+                <Controller
+                  control={control}
+                  name="endTime"
+                  rules={{ required: "End time is required" }}
+                  render={({ field: { value } }) => (
+                    <View style={styles.dateTimeContainer}>
+                      <TouchableOpacity
+                        onPress={() => setShowEndTimePicker(true)}
+                      >
+                        <TextInput
+                           style={[styles.dateTimeInput, { width: width * 0.3 }]}
+                          value={value || "--:--"}
+                          editable={false}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.dateIcon}>
+                        <FontAwesome name="clock-o" size={20} color={colors.textPrimary} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+                {errors.endTime && (
+                  <Text style={{ color: colors.error }}>{errors.endTime.message}</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Description */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Description :</Text>
+              <Controller
+                control={control}
+                name="description"
+                render={({ field: { onChange, value } }) => (
+                  <TextInput
+                    style={styles.textarea}
+                    placeholder="Enter description"
+                    placeholderTextColor={colors.textTertiary}
+                    onChangeText={onChange}
+                    value={value}
+                    multiline
+                    onFocus={() => {
+                      // Ensure the description stays visible above keyboard
+                      setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 100);
+                    }}
+                  />
+                )}
+              />
+            </View>
+
+            {/* Create Button */}
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleSubmit(onSubmit)}
+            >
+              <Text style={styles.createButtonText}>Create</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Create Button */}
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={handleSubmit(onSubmit)}
-          >
-            <Text style={styles.createButtonText}>Create</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
+        </ScrollView>
+        {/* // </ScreenWrapper> */}
+      </KeyboardAvoidingView>
       {/* Date Picker Modals */}
       <DatePickerModal
         locale="en"
@@ -938,10 +993,8 @@ const createMeeting = () => {
         minutes={35}
         use24HourClock={false}
       />
-      {/* // </ScreenWrapper> */}
     </View>
   );
 };
 
 export default createMeeting;
-

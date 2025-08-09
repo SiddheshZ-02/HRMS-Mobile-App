@@ -9,12 +9,11 @@ import {
   TextInput,
   TouchableOpacity,
   useColorScheme,
-  View
+  View,
 } from "react-native";
 import { DatePickerModal } from "react-native-paper-dates";
 
 import { Dropdown } from "react-native-element-dropdown";
-
 
 const { width } = Dimensions.get("window");
 
@@ -24,29 +23,65 @@ const getColumnWidths = () => {
   const isTablet = screenWidth > 768;
   if (isTablet) {
     return {
-      date: 100,
-      intime: 120,
-      outtime: 120,
-      workinghours: Math.max(140, screenWidth * 0.15),
-      actualworkinghours: Math.max(200, screenWidth * 0.25),
-      workmode: Math.max(130, screenWidth * 0.15),
-     
-     
+      leavecategory: 100,
+      leavetype: 120,
+      leaveduration: 120,
+      datefrom: 120,
+      dateto: 120,
+      reasonforleave: 120,
+      createddate: 120,
+      status: 120,
     };
   } else {
     return {
-      date: 100,
-      intime: 100,
-      outtime: 120,
-      workinghours: 120,
-      actualworkinghours: 180,
-      workmode: 110,
-     
+      leavecategory: 100,
+      leavetype: 120,
+      leaveduration: 120,
+      datefrom: 120,
+      dateto: 120,
+      reasonforleave: 120,
+      createddate: 120,
+      status: 120,
     };
   }
 };
 
-const ContactsList = () => {
+interface leavetype {
+  id: number;
+  leavecategory_id: number;
+  leavecategory: string;
+  dateFrom:string;
+  dateTo: string;
+  leaveType: string;
+  reason: string;
+  acceptRejectFlag: boolean;
+  active: boolean;
+  employee_id: number;
+  employee: string;
+  joining_date: string|null;
+  probation_month_count:string | null;
+  currentdate: string;
+  toDateYear:string;
+  fromDateYear: string;
+  nDays: number;
+  company_id: number;
+  type: string;
+  currenttime:string;
+  approver_timestamp:string;
+  accept_or_reject_user_email: string;
+  leave_day_type: string;
+  leavecategory_type: string;
+  pending_leave_count: {
+    employee_id: number;
+    leave_category_id: number;
+    leave_category_name:string;
+    t_count: string;
+    u_count: string;
+    a_count: string;
+  };
+}
+
+const myLeaves = () => {
   const scheme = useColorScheme();
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
@@ -56,6 +91,8 @@ const ContactsList = () => {
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [isLeave, setIsLeave] = useState<leavetype[]>([]);
+  console.log(isLeave);
 
   const [loading, setLoading] = useState(true);
   const [columnWidths, setColumnWidths] = useState(getColumnWidths());
@@ -154,43 +191,87 @@ const ContactsList = () => {
     setPage(0);
   }, []);
 
+  const fetchLeave = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://hr.actifyzone.com/HR-API/HR/Portal/leaves",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            accesstoken:
+              "KrYvsz5Ua0uGbaoHfPiknIHBRyVs7T9fnHoq2Vvw634aeS4ydn2gs3qP2IKl",
+          },
+        }
+      );
+      const data = await response.json();
+      setIsLeave(data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeave();
+  },[]);
   const TableHeader = () => (
     <View style={styles.tableHeader}>
-      <View style={[styles.headerCellContainer, { width: columnWidths.date }]}>
-        <Text style={styles.headerCell}>Date</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.leavecategory },
+        ]}
+      >
+        <Text style={styles.headerCell}>Leave Category</Text>
       </View>
       <View
-        style={[styles.headerCellContainer, { width: columnWidths.intime }]}
+        style={[styles.headerCellContainer, { width: columnWidths.leavetype }]}
       >
-        <Text style={styles.headerCell}>In time</Text>
-      </View>
-      <View
-        style={[styles.headerCellContainer, { width: columnWidths.outtime }]}
-      >
-        <Text style={styles.headerCell}>Out Time</Text>
+        <Text style={styles.headerCell}>Leave type</Text>
       </View>
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.workinghours },
+          { width: columnWidths.leaveduration },
         ]}
       >
-        <Text style={styles.headerCell}>Working Hours</Text>
+        <Text style={styles.headerCell}>Leave Duration</Text>
+      </View>
+      <View
+        style={[styles.headerCellContainer, { width: columnWidths.datefrom }]}
+      >
+        <Text style={styles.headerCell}>Date From</Text>
+      </View>
+
+      <View
+        style={[styles.headerCellContainer, { width: columnWidths.dateto }]}
+      >
+        <Text style={styles.headerCell}>Date To </Text>
       </View>
 
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.actualworkinghours },
+          { width: columnWidths.reasonforleave },
         ]}
       >
-        <Text style={styles.headerCell}> Actual Working Hours </Text>
+        <Text style={styles.headerCell}>Reason For Leave</Text>
       </View>
-
       <View
-        style={[styles.headerCellContainer, { width: columnWidths.workmode }]}
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.createddate },
+        ]}
       >
-        <Text style={styles.headerCell}>Work Mode</Text>
+        <Text style={styles.headerCell}>Created Date</Text>
+      </View>
+      <View
+        style={[styles.headerCellContainer, { width: columnWidths.status }]}
+      >
+        <Text style={styles.headerCell}>Status</Text>
       </View>
     </View>
   );
@@ -394,7 +475,7 @@ const ContactsList = () => {
   );
 };
 
-export default ContactsList;
+export default myLeaves;
 const styles = StyleSheet.create({
   container: {
     flex: 1,

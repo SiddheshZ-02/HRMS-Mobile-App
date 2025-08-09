@@ -110,7 +110,7 @@ export const Colors = {
     
     // Text Colors
     textPrimary: neutral100,
-    textSecondary: neutral400,
+    textSecondary: neutral100,
     textTertiary: neutral500,
     textInverse: neutral900,
     

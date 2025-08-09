@@ -1,23 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
-import Feather from "@expo/vector-icons/Feather";
 import { LegendList } from "@legendapp/list";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   useColorScheme,
-  View,
+  View
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { RefreshControl } from "react-native-gesture-handler";
-import { FAB } from "react-native-paper";
 import { DatePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
 
@@ -28,46 +25,27 @@ const getColumnWidths = () => {
   const screenWidth = width;
   const isTablet = screenWidth > 768;
   return {
-    edit: isTablet ? 100 : 80,
-    title: isTablet ? 150 : 130,
-    client: isTablet ? 150 : 150,
-    url: isTablet ? Math.max(180, screenWidth * 0.15) : 180,
-    startdate: isTablet ? Math.max(130, screenWidth * 0.15) : 110,
-    starttime: isTablet ? Math.max(130, screenWidth * 0.15) : 110,
-    enddate: isTablet ? Math.max(130, screenWidth * 0.15) : 110,
-    endtime: isTablet ? Math.max(130, screenWidth * 0.15) : 110,
-    recording: isTablet ? Math.max(200, screenWidth * 0.25) : 180,
-    description: isTablet ? Math.max(200, screenWidth * 0.25) : 180,
-    employee: isTablet ? Math.max(200, screenWidth * 0.25) : 180,
+    // edit: isTablet ? 100 : 80,
+    day: isTablet ? 230 : 230,
+    date: isTablet ? 150 : 150,
+   
   };
 };
 
-interface MeetingType {
-  meet_id: number;
-  title: string;
-  description: string;
-  expected_start_date: string;
-  expected_end_date: string;
-  url: string;
-  client_id: number;
-  client_name: string;
-  recording_url: string | null;
-  employee_id: Array<{
-    id: number;
-    firstname: string;
-    middlename: string;
-    lastname: string;
-    email: string;
-  }>;
+interface holidayType {
+  id: number;
+  dates: string;
+  days: string;
 }
 
-// Robust date parser for meeting date strings (supports ISO and DD-MM-YYYY / DD/MM/YYYY)
+// Robust date parser: supports ISO (YYYY-MM-DD) and DD-MM-YYYY (or DD/MM/YYYY)
 const parseDateString = (value: string): Date | null => {
   if (!value) return null;
   const direct = new Date(value);
   if (!isNaN(direct.getTime())) return direct;
   const parts = value.split(/[-/]/).map((p) => p.trim());
   if (parts.length === 3) {
+    // Heuristic: if first part has 4 digits, treat as YYYY-MM-DD
     if (parts[0].length === 4) {
       const year = Number(parts[0]);
       const month = Number(parts[1]);
@@ -76,6 +54,7 @@ const parseDateString = (value: string): Date | null => {
         return new Date(year, month - 1, day);
       }
     } else {
+      // Assume DD-MM-YYYY
       const day = Number(parts[0]);
       const month = Number(parts[1]);
       const year = Number(parts[2]);
@@ -87,31 +66,31 @@ const parseDateString = (value: string): Date | null => {
   return null;
 };
 
-const MeetingList = () => {
+const holidayLists = () => {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme ?? "light"];
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<keyof MeetingType>("title");
+  const [sortColumn, setSortColumn] = useState<keyof holidayType>("days");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [meetingList, setMeetingList] = useState<MeetingType[]>([]);
+  const [holidays, setHolidays] = useState<holidayType[]>([]);
+  // console.log(holidays);
+
   const [loading, setLoading] = useState(true);
   const [columnWidths, setColumnWidths] = useState(getColumnWidths());
 
-  const [expandedRows, setExpandedRows] = useState<{ [id: number]: boolean }>(
-    {}
-  );
+
   const router = useRouter();
 
-  const fetchMeeting = async () => {
+  const fetchHolidays = async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat/HR/Portal/meeting",
+        "https://hr1.actifyzone.com/hr-uat/HR/Portal/holidays",
         {
           method: "GET",
           headers: {
@@ -122,7 +101,7 @@ const MeetingList = () => {
         }
       );
       const res = await response.json();
-      setMeetingList(Array.isArray(res) ? res : []);
+      setHolidays(Array.isArray(res) ? res : []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -131,7 +110,7 @@ const MeetingList = () => {
   };
 
   useEffect(() => {
-    fetchMeeting();
+    fetchHolidays();
     const subscription = Dimensions.addEventListener("change", () => {
       setColumnWidths(getColumnWidths());
     });
@@ -148,24 +127,14 @@ const MeetingList = () => {
   );
 
   // Filter and search logic
-  const filteredMeetings = useMemo(() => {
-    let result = [...meetingList];
+  const filteredHolidays = useMemo(() => {
+    let result = [...holidays];
 
     // Search filter
     if (searchText) {
       const lowerSearch = searchText.toLowerCase();
       result = result.filter((item) =>
-        [
-          item.title?.toLowerCase(),
-          item.client_name?.toLowerCase(),
-          item.description?.toLowerCase(),
-          ...item.employee_id?.map(
-            (emp) =>
-              `${emp.firstname?.toLowerCase() || ""} ${
-                emp.lastname?.toLowerCase() || ""
-              }`
-          ),
-        ]
+        [item.days?.toLowerCase()]
           .filter((value) => typeof value === "string")
           .some((value) => value.includes(lowerSearch))
       );
@@ -179,7 +148,7 @@ const MeetingList = () => {
       endBound.setHours(23, 59, 59, 999);
 
       result = result.filter((item) => {
-        const parsed = parseDateString(item.expected_start_date);
+        const parsed = parseDateString(item.dates);
         if (!parsed) return false;
         const itemDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
         return itemDay >= startBound && itemDay <= endBound;
@@ -187,18 +156,18 @@ const MeetingList = () => {
     }
 
     return result;
-  }, [meetingList, searchText, startDate, endDate]);
+  }, [holidays, searchText, startDate, endDate]);
 
   // Sorting logic
-  const sortedMeetings = useMemo(() => {
-    return [...filteredMeetings].sort((a, b) => {
+  const sortedHolidays = useMemo(() => {
+    return [...filteredHolidays].sort((a, b) => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
 
-      // Handle employee_id array
-      if (sortColumn === "employee_id") {
-        valueA = a.employee_id[0]?.firstname || "";
-        valueB = b.employee_id[0]?.firstname || "";
+      // Handle days column
+      if (sortColumn === "days") {
+        valueA = a.days || "";
+        valueB = b.days || "";
       }
 
       if (typeof valueA === "string" && typeof valueB === "string") {
@@ -211,16 +180,16 @@ const MeetingList = () => {
         ? (valueA as number) - (valueB as number)
         : (valueB as number) - (valueA as number);
     });
-  }, [filteredMeetings, sortColumn, sortOrder]);
+  }, [filteredHolidays, sortColumn, sortOrder]);
 
   // Pagination
-  const paginatedMeetings = useMemo(() => {
+  const paginatedHolidays = useMemo(() => {
     const from = page * itemsPerPage;
-    return sortedMeetings.slice(from, from + itemsPerPage);
-  }, [sortedMeetings, page, itemsPerPage]);
+    return sortedHolidays.slice(from, from + itemsPerPage);
+  }, [sortedHolidays, page, itemsPerPage]);
 
   const handleSort = useCallback(
-    (column: keyof MeetingType) => {
+    (column: keyof holidayType) => {
       if (sortColumn === column) {
         setSortOrder(sortOrder === "asc" ? "desc" : "asc");
       } else {
@@ -288,151 +257,87 @@ const MeetingList = () => {
   };
 
   const TableHeader = () => (
-    <View style={[styles.tableHeader, { backgroundColor: colors.primary + '20' }]}>
-      <View style={[styles.headerCellContainer, { width: columnWidths.edit, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Edit</Text>
+    <View
+      style={[styles.tableHeader, { backgroundColor: colors.primary + "20" }]}
+    >
+      {/* <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.edit, borderRightColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Edit
+        </Text>
+      </View> */}
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.date, borderRightColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Date
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.title, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Title</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.client, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Client</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.url, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>URL</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.startdate, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}> Start Date </Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.starttime, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Start Time</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.enddate, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>End Date</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.endtime, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>End Time</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.recording, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Recording</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.description, borderRightColor: colors.border }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Description</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.employee }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Emplyoee</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.day, borderRightColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Holiday Name
+        </Text>
       </View>
     </View>
   );
 
-  const MeetingListRow = ({
+  const HolidayListRow = ({
     item,
     index,
   }: {
-    item: MeetingType;
+    item: holidayType;
     index: number;
   }) => {
+    // const startDateTime = new Date(item.expected_start_date);
+    // const endDateTime = new Date(item.expected_end_date);
+
     return (
-      <View style={[
-        styles.tableRow, 
-        { 
-          backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceVariant,
-          borderBottomColor: colors.border 
-        }
-      ]}>
-        <View style={[styles.cellContainer, { width: columnWidths.edit }]}>
+      <View
+        style={[
+          styles.tableRow,
+          {
+            backgroundColor:
+              index % 2 === 0 ? colors.surface : colors.surfaceVariant,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        {/* <View style={[styles.cellContainer, { width: columnWidths.edit }]}>
           <TouchableOpacity
             // onPress={() => router.push(`/edit-meeting/${item.meet_id}`)}
             style={styles.cell}
           >
             <Feather name="edit" size={14} color={colors.textPrimary} />
           </TouchableOpacity>
-        </View>
-        <View style={[styles.cellContainer, { width: columnWidths.title }]}>
-          <Text selectable style={[styles.cell, styles.nameCell, { color: colors.primary }]}>
-            {item.title}
-          </Text>
-        </View>
-        <View style={[styles.cellContainer, { width: columnWidths.client }]}>
-          <Text selectable style={[styles.cell, styles.cell, { color: colors.textPrimary }]}>
-            {item.client_name}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => {
-            if (item.url) Linking.openURL(item.url);
-          }}
-          style={[styles.cellContainer, { width: columnWidths.url }]}
-        >
+        </View> */}
+        <View style={[styles.cellContainer, { width: columnWidths.date }]}>
           <Text
             selectable
-            style={[styles.emailCell, { color: colors.primary }]}
-            numberOfLines={2}
-            ellipsizeMode="tail"
+            style={[styles.cell, styles.nameCell, { color: colors.primary }]}
           >
-            {item.url}...
-          </Text>
-        </TouchableOpacity>
-        <View style={[styles.cellContainer, { width: columnWidths.startdate }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
-            {item.expected_start_date}
+            {item.dates}
           </Text>
         </View>
-        <View style={[styles.cellContainer, { width: columnWidths.starttime }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
-            {item.expected_start_date}
+        <View style={[styles.cellContainer, { width: columnWidths.day }]}>
+          <Text
+            selectable
+            style={[styles.cell, styles.cell, { color: colors.textPrimary }]}
+          >
+            {item.days}
           </Text>
         </View>
-        <View style={[styles.cellContainer, { width: columnWidths.enddate }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
-            {item.expected_end_date}
-          </Text>
-        </View>
-        <View style={[styles.cellContainer, { width: columnWidths.endtime }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
-            {item.expected_end_date}
-          </Text>
-        </View>
-        <View style={[styles.cellContainer, { width: columnWidths.recording }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
-            {item.recording_url || "N/A"}
-          </Text>
-        </View>
-        <View style={[styles.cellContainer, { width: columnWidths.description }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
-            {item.description}
-          </Text>
-        </View>
-
-        {item.employee_id && item.employee_id.length > 0 && (
-          <View style={[styles.cellContainer, { width: columnWidths.employee }]}>
-            {(expandedRows[item.meet_id]
-              ? item.employee_id
-              : item.employee_id.slice(0, 3)
-            ).map((emp, idx) => (
-              <Text key={idx} numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textPrimary }}>
-                {`${emp.firstname} ${emp.lastname}`}
-              </Text>
-            ))}
-
-            {item.employee_id.length > 3 && (
-              <TouchableOpacity
-                onPress={() =>
-                  setExpandedRows((prev) => ({
-                    ...prev,
-                    [item.meet_id]: !prev[item.meet_id],
-                  }))
-                }
-              >
-                <Text style={{ color: colors.primary }}>
-                  {expandedRows[item.meet_id]
-                    ? "Show less"
-                    : `+${item.employee_id.length - 3} more`}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
       </View>
     );
   };
@@ -445,7 +350,12 @@ const MeetingList = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <Ionicons
             name="search"
             size={20}
@@ -454,7 +364,7 @@ const MeetingList = () => {
           />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder="Search by title, client, description, or employee..."
+            placeholder="Search by holiday name..."
             value={searchText}
             onChangeText={(text) => {
               setSearchText(text);
@@ -464,7 +374,11 @@ const MeetingList = () => {
           />
           {searchText.length > 0 && (
             <TouchableOpacity onPress={() => setSearchText("")}>
-              <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color={colors.textTertiary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -472,25 +386,47 @@ const MeetingList = () => {
         <View style={styles.filtersContainer}>
           <View style={styles.filterLeft}>
             <TouchableOpacity
-              style={[styles.filterButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[
+                styles.filterButton,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               onPress={() => setDateModalVisible(true)}
             >
-              <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-              <Text style={[styles.filterButtonText, { color: colors.textPrimary }]}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={colors.primary}
+              />
+              <Text
+                style={[styles.filterButtonText, { color: colors.textPrimary }]}
+              >
                 {startDate && endDate ? "Date Filtered" : "Filter by Date"}
               </Text>
             </TouchableOpacity>
             {(startDate || endDate) && (
               <TouchableOpacity
-                style={[styles.clearFilterButton, { backgroundColor: colors.error + '15', borderColor: colors.error + '30' }]}
+                style={[
+                  styles.clearFilterButton,
+                  {
+                    backgroundColor: colors.error + "15",
+                    borderColor: colors.error + "30",
+                  },
+                ]}
                 onPress={handleResetDateRange}
               >
                 <Ionicons name="close" size={14} color={colors.error} />
-                <Text style={[styles.clearFilterText, { color: colors.error }]}>Clear</Text>
+                <Text style={[styles.clearFilterText, { color: colors.error }]}>
+                  Clear
+                </Text>
               </TouchableOpacity>
             )}
           </View>
-          <View style={[styles.sortContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.sortContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Dropdown
               data={[
                 { label: "↑ Ascending", value: "asc" },
@@ -508,25 +444,36 @@ const MeetingList = () => {
               placeholderStyle={{ color: colors.textTertiary }}
               selectedTextStyle={{ color: colors.textPrimary }}
               itemTextStyle={{ color: colors.textPrimary }}
-              containerStyle={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              containerStyle={[
+                styles.pickerContainer,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               itemContainerStyle={{ backgroundColor: colors.surface }}
-              activeColor={colors.primary + '20'}
+              activeColor={colors.primary + "20"}
             />
           </View>
         </View>
 
         <View style={styles.summaryContainer}>
           <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-            Showing {paginatedMeetings.length} of {filteredMeetings.length}{" "}
-            meetings
+            Showing {paginatedHolidays.length} of {filteredHolidays.length} Holidays
           </Text>
         </View>
 
-        <View style={[styles.tableContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.tableContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading meetings...</Text>
+              <Text
+                style={[styles.loadingText, { color: colors.textSecondary }]}
+              >
+                Loading Holidays...
+              </Text>
             </View>
           ) : (
             <ScrollView
@@ -534,7 +481,7 @@ const MeetingList = () => {
                 <RefreshControl
                   colors={[colors.primary]}
                   refreshing={loading}
-                  onRefresh={fetchMeeting}
+                  onRefresh={fetchHolidays}
                 />
               }
               overScrollMode="never"
@@ -546,27 +493,38 @@ const MeetingList = () => {
             >
               <View style={{ width: totalTableWidth }}>
                 <TableHeader />
-                {filteredMeetings.length === 0 ? (
+                {filteredHolidays.length === 0 ? (
                   <View style={styles.emptyContainer}>
-                    <Ionicons name="people-outline" size={64} color={colors.textTertiary} />
-                    <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                      {meetingList.length === 0
-                        ? "No meetings found"
-                        : "No matching meetings"}
+                    <Ionicons
+                      name="people-outline"
+                      size={64}
+                      color={colors.textTertiary}
+                    />
+                    <Text
+                      style={[styles.emptyTitle, { color: colors.textPrimary }]}
+                    >
+                      {holidays.length === 0
+                        ? "No holidays found"
+                        : "No matching holidays"}
                     </Text>
-                    <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                      {meetingList.length === 0
-                        ? "Your meeting list is empty."
+                    <Text
+                      style={[
+                        styles.emptySubtitle,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {holidays.length === 0
+                        ? "Your holiday list is empty."
                         : "Try adjusting your search or filter criteria."}
                     </Text>
                   </View>
                 ) : (
                   <LegendList
-                    data={paginatedMeetings}
+                    data={paginatedHolidays}
                     renderItem={({ item, index }) => (
-                      <MeetingListRow item={item} index={index} />
+                      <HolidayListRow item={item} index={index} />
                     )}
-                    keyExtractor={(item) => item.meet_id.toString()}
+                    keyExtractor={(item) => item.id.toString()}
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />
@@ -576,13 +534,20 @@ const MeetingList = () => {
           )}
         </View>
 
-        {filteredMeetings.length > 0 && (
-          <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.paginationInfo, { color: colors.textSecondary }]}>
+        {filteredHolidays.length > 0 && (
+          <View
+            style={[
+              styles.paginationContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text
+              style={[styles.paginationInfo, { color: colors.textSecondary }]}
+            >
               {`${page * itemsPerPage + 1}-${Math.min(
                 (page + 1) * itemsPerPage,
-                filteredMeetings.length
-              )} of ${filteredMeetings.length}`}
+                filteredHolidays.length
+              )} of ${filteredHolidays.length}`}
             </Text>
             <View style={styles.paginationControls}>
               <TouchableOpacity
@@ -600,17 +565,21 @@ const MeetingList = () => {
                   color={page === 0 ? colors.textTertiary : colors.primary}
                 />
               </TouchableOpacity>
-              <Text style={[styles.pageIndicator, { color: colors.textPrimary }]}>{page + 1}</Text>
+              <Text
+                style={[styles.pageIndicator, { color: colors.textPrimary }]}
+              >
+                {page + 1}
+              </Text>
               <TouchableOpacity
                 onPress={() => setPage(page + 1)}
                 disabled={
-                  page >= Math.ceil(filteredMeetings.length / itemsPerPage) - 1
+                  page >= Math.ceil(filteredHolidays.length / itemsPerPage) - 1
                 }
                 style={[
                   styles.paginationButton,
                   { backgroundColor: colors.surfaceVariant },
                   page >=
-                    Math.ceil(filteredMeetings.length / itemsPerPage) - 1 &&
+                    Math.ceil(filteredHolidays.length / itemsPerPage) - 1 &&
                     styles.disabledButton,
                 ]}
               >
@@ -619,7 +588,7 @@ const MeetingList = () => {
                   size={20}
                   color={
                     page >=
-                    Math.ceil(filteredMeetings.length / itemsPerPage) - 1
+                    Math.ceil(filteredHolidays.length / itemsPerPage) - 1
                       ? colors.textTertiary
                       : colors.primary
                   }
@@ -633,15 +602,22 @@ const MeetingList = () => {
           visible={dateModalVisible}
           onClose={handleCloseModal}
           onApply={handleApplyDateRange}
+        //   onReset={handleResetDateRange}
           initialStartDate={startDate}
           initialEndDate={endDate}
         />
 
-        <FAB
+        {/* <FAB
           icon="plus"
-          style={{ position: "absolute", margin: 16, right: 0, bottom: "12%", backgroundColor: colors.primary }}
-          onPress={()=>router.push("/(protected)/createMeeting")}
-        />
+          style={{
+            position: "absolute",
+            margin: 16,
+            right: 0,
+            bottom: "12%",
+            backgroundColor: colors.primary,
+          }}
+          onPress={() => router.push("/(protected)/createMeeting")}
+        /> */}
       </View>
     </View>
   );
@@ -770,6 +746,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   activeSortHeader: {
+    // color property removed as it's not valid for ViewStyle
   },
   tableRow: {
     flexDirection: "row",
@@ -813,7 +790,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 60,
 
-    width: "25%",
+
   },
   emptyTitle: {
     fontSize: 20,
@@ -861,7 +838,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginHorizontal: 16,
   },
-}) as any;
+});
 
-export default MeetingList;
-
+export default holidayLists;
