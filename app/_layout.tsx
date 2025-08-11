@@ -1,7 +1,9 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
+import { en, registerTranslation } from "react-native-paper-dates";
 import "react-native-reanimated";
+registerTranslation("en", en);
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 

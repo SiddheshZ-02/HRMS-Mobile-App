@@ -1,14 +1,20 @@
 import { Colors } from "@/constants/Colors";
-import { FontAwesome5, MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import {
+  FontAwesome5,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   DrawerContentComponentProps,
   DrawerContentScrollView,
 } from "@react-navigation/drawer";
 import { usePathname, useRouter } from "expo-router";
 import { Drawer } from "expo-router/drawer";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Appearance,
   Dimensions,
   Image,
   StyleSheet,
@@ -21,11 +27,42 @@ import Collapsible from "react-native-collapsible";
 
 const _layout = () => {
   const [isLeavesCollaps, setIsLeavesCollaps] = useState(true);
-
   const router = useRouter();
   const path = usePathname();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const systemColorScheme = useColorScheme();
+  const [theme, setTheme] = useState(systemColorScheme ?? "light");
+  const colors = Colors[theme];
+
+  // Load theme from AsyncStorage on mount
+  useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem("theme");
+        if (savedTheme) {
+          setTheme(savedTheme);
+          Appearance.setColorScheme(savedTheme);
+        } else {
+          setTheme(systemColorScheme ?? "light");
+          Appearance.setColorScheme(systemColorScheme);
+        }
+      } catch (error) {
+        console.error("Failed to load theme from AsyncStorage:", error);
+      }
+    };
+    loadTheme();
+  }, [systemColorScheme]);
+
+  // Function to toggle and save theme
+  const toggleTheme = async () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    try {
+      await AsyncStorage.setItem("theme", newTheme);
+      setTheme(newTheme);
+      Appearance.setColorScheme(newTheme);
+    } catch (error) {
+      console.error("Failed to save theme to AsyncStorage:", error);
+    }
+  };
 
   const CustomDrawer = (props: DrawerContentComponentProps) => {
     return (
@@ -34,218 +71,247 @@ const _layout = () => {
       >
         <DrawerContentScrollView
           {...props}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "space-between",
+          }}
         >
-          <View style={[styles.header, { padding: 20 }]}>
-            <Image
-              source={require("@/assets/images/actifylogo.png")}
-              style={styles.logo}
-            />
+          <View>
+            <View style={[styles.header, { padding: 20 }]}>
+              <Image
+                source={require("@/assets/images/actifylogo.png")}
+                style={styles.logo}
+              />
+              <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+                HR PORTAL
+              </Text>
+            </View>
 
-            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-              HR PORTAL
-            </Text>
+            <View style={[styles.divider]} />
+
+            <TouchableOpacity
+              style={[
+                styles.drawerItem,
+                props.state.routeNames[props.state.index] === "index" && [
+                  styles.activeDrawerItem,
+                  {
+                    backgroundColor: colors.surfaceVariant,
+                    borderLeftColor: colors.primary,
+                  },
+                ],
+              ]}
+              onPress={() => {
+                requestAnimationFrame(() => {
+                  router.push("/(protected)");
+                  setIsLeavesCollaps(true);
+                });
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <MaterialIcons
+                  name="home"
+                  size={24}
+                  color={
+                    props.state.routeNames[props.state.index] === "index"
+                      ? colors.primary
+                      : colors.textTertiary
+                  }
+                />
+                <Text
+                  style={[styles.drawerItemText, { color: colors.textPrimary }]}
+                >
+                  Home
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={[styles.divider]} />
+
+            <TouchableOpacity
+              style={[
+                styles.drawerItem,
+                props.state.routeNames[props.state.index] === "attendance" && [
+                  styles.activeDrawerItem,
+                  {
+                    backgroundColor: colors.surfaceVariant,
+                    borderLeftColor: colors.primary,
+                  },
+                ],
+              ]}
+              onPress={() => {
+                requestAnimationFrame(() => {
+                  router.push("/(protected)/attendance");
+                  setIsLeavesCollaps(true);
+                });
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <FontAwesome6
+                  name="calendar-check"
+                  size={24}
+                  color={
+                    props.state.routeNames[props.state.index] === "attendance"
+                      ? colors.primary
+                      : colors.textTertiary
+                  }
+                />
+                <Text
+                  style={[styles.drawerItemText, { color: colors.textPrimary }]}
+                >
+                  Attendance
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={[styles.divider]} />
+
+            <TouchableOpacity
+              style={[styles.sectionHeader, { borderColor: colors.border }]}
+              onPress={() => {
+                requestAnimationFrame(() => {
+                  setIsLeavesCollaps(!isLeavesCollaps);
+                });
+              }}
+            >
+              <View style={styles.sectionHeaderContent}>
+                <FontAwesome5
+                  name="umbrella-beach"
+                  size={24}
+                  color={isLeavesCollaps ? colors.textTertiary : colors.primary}
+                />
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textPrimary }]}
+                >
+                  Leave
+                </Text>
+              </View>
+              <MaterialIcons
+                name={isLeavesCollaps ? "expand-more" : "expand-less"}
+                size={24}
+                color={colors.textTertiary}
+              />
+            </TouchableOpacity>
+            <Collapsible collapsed={isLeavesCollaps}>
+              <TouchableOpacity
+                style={[
+                  styles.subItem,
+                  path === "/holidayLists" && [
+                    styles.activeSubItem,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderLeftColor: colors.primary,
+                    },
+                  ],
+                ]}
+                onPress={() => {
+                  requestAnimationFrame(() => {
+                    router.push("/(protected)/holidayLists");
+                  });
+                }}
+              >
+                <MaterialIcons
+                  name="view-list"
+                  size={22}
+                  color={
+                    path === "/holidayLists"
+                      ? colors.primary
+                      : colors.textTertiary
+                  }
+                />
+                <Text
+                  style={[styles.subItemText, { color: colors.textPrimary }]}
+                >
+                  List Of Holidays
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.subItem,
+                  path === "/applyLeave" && [
+                    styles.activeSubItem,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderLeftColor: colors.primary,
+                    },
+                  ],
+                ]}
+                onPress={() => {
+                  requestAnimationFrame(() => {
+                    router.push("/(protected)/applyLeave");
+                  });
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="airplane-takeoff"
+                  size={22}
+                  color={
+                    path === "/applyLeave"
+                      ? colors.primary
+                      : colors.textTertiary
+                  }
+                />
+                <Text
+                  style={[styles.subItemText, { color: colors.textPrimary }]}
+                >
+                  Apply Leave
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.subItem,
+                  path === "/myLeaves" && [
+                    styles.activeSubItem,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderLeftColor: colors.primary,
+                    },
+                  ],
+                ]}
+                onPress={() => {
+                  requestAnimationFrame(() => {
+                    router.push("/(protected)/myLeaves");
+                  });
+                }}
+              >
+                <FontAwesome5
+                  name="calendar-day"
+                  size={22}
+                  color={
+                    path === "/myLeaves" ? colors.primary : colors.textTertiary
+                  }
+                />
+                <Text
+                  style={[styles.subItemText, { color: colors.textPrimary }]}
+                >
+                  My Leave
+                </Text>
+              </TouchableOpacity>
+            </Collapsible>
           </View>
 
-          <View style={[styles.divider]} />
-
-          <TouchableOpacity
-            style={[
-              styles.drawerItem,
-              props.state.routeNames[props.state.index] === "index" && [
-                styles.activeDrawerItem,
-                {
-                  backgroundColor: colors.surfaceVariant,
-                  borderLeftColor: colors.primary,
-                },
-              ],
-            ]}
-            onPress={() => {
-              requestAnimationFrame(() => {
-                router.push("/(protected)");
-                setIsLeavesCollaps(true)
-              });
-            }}
+          {/* Theme Toggle Button */}
+          <View
+            style={[styles.bottomSection, { borderTopColor: colors.border }]}
           >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <MaterialIcons
-                name="home"
-                size={24}
-                color={
-                  props.state.routeNames[props.state.index] === "index"
-                    ? colors.primary
-                    : colors.textTertiary
-                }
-              />
-              <Text
-                style={[styles.drawerItemText, { color: colors.textPrimary }]}
-              >
-                Home
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={[styles.divider]} />
-
-          <TouchableOpacity
-            style={[
-              styles.drawerItem,
-              props.state.routeNames[props.state.index] === "attendance" && [
-                styles.activeDrawerItem,
-                {
-                  backgroundColor: colors.surfaceVariant,
-                  borderLeftColor: colors.primary,
-                },
-              ],
-            ]}
-            onPress={() => {
-              requestAnimationFrame(() => {
-                router.push("/(protected)/attendance");
-                  setIsLeavesCollaps(true)
-              });
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <FontAwesome6
-                name="calendar-check"
-                size={24}
-                color={
-                  props.state.routeNames[props.state.index] === "attendance"
-                    ? colors.primary
-                    : colors.textTertiary
-                }
-              />
-              <Text
-                style={[styles.drawerItemText, { color: colors.textPrimary }]}
-              >
-                Attendance
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <View style={[styles.divider]} />
-
-          <TouchableOpacity
-            style={[styles.sectionHeader, { borderColor: colors.border }]}
-            onPress={() => {
-              requestAnimationFrame(() => {
-                setIsLeavesCollaps(!isLeavesCollaps);
-                // setIsLeadsCollapsed(true);
-              });
-            }}
-          >
-            <View style={styles.sectionHeaderContent}>
-            
+            <TouchableOpacity
+              style={{ flexDirection: "row", alignItems: "center" }}
+              onPress={toggleTheme}
+            >
               <FontAwesome5
-                name="umbrella-beach"
+                name={theme === "dark" ? "sun" : "moon"}
                 size={24}
-                color={isLeavesCollaps ? colors.textTertiary : colors.primary}
+                color={colors.textPrimary}
               />
               <Text
-                style={[styles.sectionTitle, { color: colors.textPrimary }]}
+                style={[
+                  styles.drawerItemText,
+                  { color: colors.textPrimary, marginLeft: 10 },
+                ]}
               >
-                Leave
-              </Text>
-            </View>
-            <MaterialIcons
-              name={isLeavesCollaps ? "expand-more" : "expand-less"}
-              size={24}
-              color={colors.textTertiary}
-            />
-          </TouchableOpacity>
-          <Collapsible collapsed={isLeavesCollaps}>
-            <TouchableOpacity
-              style={[
-                styles.subItem,
-                path === "/holidayLists" && [
-                  styles.activeSubItem,
-                  {
-                    backgroundColor: colors.surfaceVariant,
-                    borderLeftColor: colors.primary,
-                  },
-                ],
-              ]}
-              onPress={() => {
-                requestAnimationFrame(() => {
-                  router.push("/(protected)/holidayLists");
-                });
-              }}
-            >
-
-            
-              <MaterialIcons
-                name="view-list"
-                size={22}
-                color={
-                  path === "/holidayLists"
-                    ? colors.primary
-                    : colors.textTertiary
-                }
-              />
-              <Text style={[styles.subItemText, { color: colors.textPrimary }]}>
-                List Of Holidays
+                {theme === "dark" ? "Light Theme" : "Dark Theme"}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.subItem,
-                path === "/applyLeave" && [
-                  styles.activeSubItem,
-                  {
-                    backgroundColor: colors.surfaceVariant,
-                    borderLeftColor: colors.primary,
-                  },
-                ],
-              ]}
-              onPress={() => {
-                requestAnimationFrame(() => {
-                  router.push("/(protected)/applyLeave");
-                });
-              }}
-            >
-
-                
-              <MaterialCommunityIcons
-                name="airplane-takeoff"
-                size={22}
-                color={
-                  path === "/applyLeave" ? colors.primary : colors.textTertiary
-                }
-              />
-              <Text style={[styles.subItemText, { color: colors.textPrimary }]}>
-                Apply Leave
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.subItem,
-                path === "/myLeaves" && [
-                  styles.activeSubItem,
-                  {
-                    backgroundColor: colors.surfaceVariant,
-                    borderLeftColor: colors.primary,
-                  },
-                ],
-              ]}
-              onPress={() => {
-                requestAnimationFrame(() => {
-                  router.push("/(protected)/myLeaves");
-                });
-              }}
-            >
-              
-              <FontAwesome5
-                name="calendar-day"
-                size={22}
-                color={
-                  path === "/myLeaves" ? colors.primary : colors.textTertiary
-                }
-              />
-              <Text style={[styles.subItemText, { color: colors.textPrimary }]}>
-                My Leave
-              </Text>
-            </TouchableOpacity>
-          </Collapsible>
+          </View>
         </DrawerContentScrollView>
       </View>
     );
@@ -449,7 +515,7 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     padding: 10,
-    // borderTopWidth: 1,
+    borderTopWidth: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

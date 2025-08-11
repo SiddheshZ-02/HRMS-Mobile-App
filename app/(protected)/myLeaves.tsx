@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -12,8 +13,9 @@ import {
   View,
 } from "react-native";
 import { DatePickerModal } from "react-native-paper-dates";
-
 import { Dropdown } from "react-native-element-dropdown";
+import { LegendList } from "@legendapp/list";
+import { Colors } from "../../constants/Colors";
 
 const { width } = Dimensions.get("window");
 
@@ -21,83 +23,66 @@ const { width } = Dimensions.get("window");
 const getColumnWidths = () => {
   const screenWidth = width;
   const isTablet = screenWidth > 768;
-  if (isTablet) {
-    return {
-      leavecategory: 100,
-      leavetype: 120,
-      leaveduration: 120,
-      datefrom: 120,
-      dateto: 120,
-      reasonforleave: 120,
-      createddate: 120,
-      status: 120,
-    };
-  } else {
-    return {
-      leavecategory: 100,
-      leavetype: 120,
-      leaveduration: 120,
-      datefrom: 120,
-      dateto: 120,
-      reasonforleave: 120,
-      createddate: 120,
-      status: 120,
-    };
-  }
+  return {
+    leavecategory: isTablet ? 120 : 100,
+    leavetype: isTablet ? 140 : 120,
+    leaveduration: isTablet ? 140 : 120,
+    datefrom: isTablet ? 140 : 120,
+    dateto: isTablet ? 140 : 120,
+    reasonforleave: isTablet ? Math.max(150, screenWidth * 0.2) : 120,
+    createddate: isTablet ? 140 : 120,
+    status: isTablet ? 140 : 120,
+  };
 };
 
 interface leavetype {
-  id: number;
-  leavecategory_id: number;
-  leavecategory: string;
-  dateFrom:string;
-  dateTo: string;
-  leaveType: string;
-  reason: string;
   acceptRejectFlag: boolean;
   active: boolean;
-  employee_id: number;
-  employee: string;
-  joining_date: string|null;
-  probation_month_count:string | null;
-  currentdate: string;
-  toDateYear:string;
-  fromDateYear: string;
-  nDays: number;
+  carried_forward_leave: string;
   company_id: number;
-  type: string;
-  currenttime:string;
-  approver_timestamp:string;
-  accept_or_reject_user_email: string;
-  leave_day_type: string;
-  leavecategory_type: string;
-  pending_leave_count: {
-    employee_id: number;
-    leave_category_id: number;
-    leave_category_name:string;
-    t_count: string;
-    u_count: string;
-    a_count: string;
-  };
+  currentdate: string;
+  dateFrom: string;
+  dateTo: string;
+  employee: string;
+  employee_id: number;
+  fromDateYear: string;
+  id: number;
+  joining_date: string;
+  leaveType: string;
+  leavecategory: string;
+  leavecategory_id: number;
+  nDays: number;
+  pending_leave_count: [
+    {
+      employee_id: number;
+      leave_category_id: number;
+      leave_category_name: string;
+      l_count: number;
+    }
+  ];
+  probation_month_count: number;
+  reason: string;
+  toDateYear: string;
+  type: "paid";
 }
 
 const myLeaves = () => {
-  const scheme = useColorScheme();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<string>("name");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortColumn, setSortColumn] = useState<keyof leavetype>("leavecategory");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isLeave, setIsLeave] = useState<leavetype[]>([]);
-  console.log(isLeave);
-
   const [loading, setLoading] = useState(true);
   const [columnWidths, setColumnWidths] = useState(getColumnWidths());
 
-  // Update column widths on orientation change
+  const router = useRouter();
+
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", () => {
       setColumnWidths(getColumnWidths());
@@ -105,72 +90,96 @@ const myLeaves = () => {
     return () => subscription?.remove();
   }, []);
 
-  // ✅ FIX 1: Removed sort state resets from useFocusEffect
   useFocusEffect(
     useCallback(() => {
       setSearchText("");
       setStartDate(null);
       setEndDate(null);
       setPage(0);
-      // setSortColumn(""); // This was incorrectly clearing the sort state
-      // setSortOrder(""); // This was incorrectly clearing the sort state
     }, [])
   );
 
-  const Router = useRouter();
-
-  const DateRangeModal = ({
-    visible,
-    onClose,
-    onApply,
-    onReset,
-    initialStartDate,
-    initialEndDate,
-  }: {
-    visible: boolean;
-    onClose: () => void;
-    onApply: (startDate: Date, endDate: Date) => void;
-    onReset: () => void;
-    initialStartDate: Date | null;
-    initialEndDate: Date | null;
-  }) => {
-    const onConfirm = useCallback(
-      (params: { startDate: Date; endDate: Date }) => {
-        onApply(params.startDate, params.endDate);
-        onClose();
-      },
-      [onApply, onClose]
-    );
-
-    return (
-      <>
-        <DatePickerModal
-          locale="en"
-          mode="range"
-          visible={visible}
-          onDismiss={onClose}
-          startDate={initialStartDate}
-          endDate={initialEndDate}
-          onConfirm={onConfirm}
-          saveLabel="Apply Range"
-          label="Select Date Range"
-          animationType="fade"
-        />
-      </>
-    );
+  const fetchLeave = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "https://hr1.actifyzone.com/hr-uat/HR/Portal/leaves",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            accesstoken:
+              "VbLbaGqwnpIgDzVxv1LRIdPsWx4Vw9k5Es0W4YacuV1o01M2Rg4wBrWf3rN4",
+          },
+        }
+      );
+      const data = await response.json();
+      setIsLeave(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const from = page * itemsPerPage;
-  const to = Math.min((page + 1) * itemsPerPage);
+  useEffect(() => {
+    fetchLeave();
+  }, []);
+
+  const filteredLeaves = useMemo(() => {
+    let result = [...isLeave];
+    if (searchText) {
+      const lowerSearch = searchText.toLowerCase();
+      result = result.filter((item) =>
+        [
+          item.leavecategory?.toLowerCase(),
+          item.leaveType?.toLowerCase(),
+          item.reason?.toLowerCase(),
+        ].some((value) => value?.includes(lowerSearch))
+      );
+    }
+    if (startDate && endDate) {
+      const startBound = new Date(startDate);
+      startBound.setHours(0, 0, 0, 0);
+      const endBound = new Date(endDate);
+      endBound.setHours(23, 59, 59, 999);
+      result = result.filter((item) => {
+        const parsedFrom = new Date(item.dateFrom);
+        return parsedFrom >= startBound && parsedFrom <= endBound;
+      });
+    }
+    return result;
+  }, [isLeave, searchText, startDate, endDate]);
+
+  const sortedLeaves = useMemo(() => {
+    return [...filteredLeaves].sort((a, b) => {
+      let valueA = a[sortColumn];
+      let valueB = b[sortColumn];
+      if (typeof valueA === "string" && typeof valueB === "string") {
+        return sortOrder === "asc"
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      }
+      return sortOrder === "asc"
+        ? (valueA as number) - (valueB as number)
+        : (valueB as number) - (valueA as number);
+    });
+  }, [filteredLeaves, sortColumn, sortOrder]);
+
+  const paginatedLeaves = useMemo(() => {
+    const from = page * itemsPerPage;
+    return sortedLeaves.slice(from, from + itemsPerPage);
+  }, [sortedLeaves, page, itemsPerPage]);
 
   const handleSort = useCallback(
-    (column: string) => {
+    (column: keyof leavetype) => {
       if (sortColumn === column) {
         setSortOrder(sortOrder === "asc" ? "desc" : "asc");
       } else {
         setSortColumn(column);
         setSortOrder("asc");
       }
+      setPage(0);
     },
     [sortColumn, sortOrder]
   );
@@ -191,90 +200,140 @@ const myLeaves = () => {
     setPage(0);
   }, []);
 
-  const fetchLeave = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        "https://hr.actifyzone.com/HR-API/HR/Portal/leaves",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            accesstoken:
-              "KrYvsz5Ua0uGbaoHfPiknIHBRyVs7T9fnHoq2Vvw634aeS4ydn2gs3qP2IKl",
-          },
+  const DateRangeModal = ({
+    visible,
+    onClose,
+    onApply,
+    initialStartDate,
+    initialEndDate,
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    onApply: (startDate: Date, endDate: Date) => void;
+    initialStartDate: Date | null;
+    initialEndDate: Date | null;
+  }) => {
+    const onConfirm = useCallback(
+      (params: { startDate: any; endDate: any }) => {
+        if (params.startDate && params.endDate) {
+          onApply(new Date(params.startDate), new Date(params.endDate));
         }
-      );
-      const data = await response.json();
-      setIsLeave(data);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
+        onClose();
+      },
+      [onApply, onClose]
+    );
+
+    return (
+      <DatePickerModal
+        locale="en"
+        mode="range"
+        visible={visible}
+        onDismiss={onClose}
+        startDate={initialStartDate as any}
+        endDate={initialEndDate as any}
+        onConfirm={onConfirm}
+        saveLabel="Apply Range"
+        label="Select Date Range"
+        animationType="fade"
+      />
+    );
   };
 
-  useEffect(() => {
-    fetchLeave();
-  },[]);
   const TableHeader = () => (
-    <View style={styles.tableHeader}>
-      <View
-        style={[
-          styles.headerCellContainer,
-          { width: columnWidths.leavecategory },
-        ]}
+    <View style={[styles.tableHeader, { backgroundColor: colors.primary + '20' }]}>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.leavecategory, borderRightColor: colors.border }]}
+        onPress={() => handleSort("leavecategory")}
       >
-        <Text style={styles.headerCell}>Leave Category</Text>
-      </View>
-      <View
-        style={[styles.headerCellContainer, { width: columnWidths.leavetype }]}
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Leave Category</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.leavetype, borderRightColor: colors.border }]}
+        onPress={() => handleSort("leaveType")}
       >
-        <Text style={styles.headerCell}>Leave type</Text>
-      </View>
-      <View
-        style={[
-          styles.headerCellContainer,
-          { width: columnWidths.leaveduration },
-        ]}
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Leave Type</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.leaveduration, borderRightColor: colors.border }]}
+        onPress={() => handleSort("nDays")}
       >
-        <Text style={styles.headerCell}>Leave Duration</Text>
-      </View>
-      <View
-        style={[styles.headerCellContainer, { width: columnWidths.datefrom }]}
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Leave Duration</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.datefrom, borderRightColor: colors.border }]}
+        onPress={() => handleSort("dateFrom")}
       >
-        <Text style={styles.headerCell}>Date From</Text>
-      </View>
-
-      <View
-        style={[styles.headerCellContainer, { width: columnWidths.dateto }]}
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Date From</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.dateto, borderRightColor: colors.border }]}
+        onPress={() => handleSort("dateTo")}
       >
-        <Text style={styles.headerCell}>Date To </Text>
-      </View>
-
-      <View
-        style={[
-          styles.headerCellContainer,
-          { width: columnWidths.reasonforleave },
-        ]}
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Date To</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.reasonforleave, borderRightColor: colors.border }]}
+        onPress={() => handleSort("reason")}
       >
-        <Text style={styles.headerCell}>Reason For Leave</Text>
-      </View>
-      <View
-        style={[
-          styles.headerCellContainer,
-          { width: columnWidths.createddate },
-        ]}
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Reason For Leave</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.createddate, borderRightColor: colors.border }]}
+        onPress={() => handleSort("currentdate")}
       >
-        <Text style={styles.headerCell}>Created Date</Text>
-      </View>
-      <View
-        style={[styles.headerCellContainer, { width: columnWidths.status }]}
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Created Date</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.headerCellContainer, { width: columnWidths.status, borderRightColor: colors.border }]}
+        onPress={() => handleSort("carried_forward_leave")}
       >
-        <Text style={styles.headerCell}>Status</Text>
-      </View>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Status</Text>
+      </TouchableOpacity>
     </View>
   );
+
+  const LeavesRow = ({ item, index }: { item: leavetype; index: number }) => {
+    return (
+      <View
+        style={[
+          styles.tableRow,
+          {
+            backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceVariant,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        <View style={[styles.cellContainer, { width: columnWidths.leavecategory }]}>
+          <Text style={[styles.cell, styles.nameCell, { color: colors.textPrimary }]}>{item.leavecategory}</Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.leavetype }]}>
+          <Text style={[styles.cell, { color: colors.textPrimary }]}>{item.leaveType}</Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.leaveduration }]}>
+          <Text style={[styles.cell, { color: colors.textSecondary }]}>{item.nDays}</Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.datefrom }]}>
+          <Text style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>{item.dateFrom}</Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.dateto }]}>
+          <Text style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>{item.dateTo}</Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.reasonforleave }]}>
+          <Text style={[styles.cell, { color: colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">
+            {item.reason}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.createddate }]}>
+          <Text style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>{item.currentdate}</Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.status }]}>
+          <Text style={[styles.cell, { color: item.carried_forward_leave === "no" ? colors.error : colors.success }]}>
+            {item.carried_forward_leave === "no" ? "Pending" : "Success"}
+          </Text>
+        </View>
+      </View>
+    );
+  };
 
   const totalTableWidth = Object.values(columnWidths).reduce(
     (sum, width) => sum + width,
@@ -282,25 +341,28 @@ const myLeaves = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Ionicons
             name="search"
             size={20}
-            color="#9CA3AF"
+            color={colors.textTertiary}
             style={styles.searchIcon}
           />
           <TextInput
-            style={styles.searchInput}
-            placeholder="Search contacts by name, email, or phone..."
+            style={[styles.searchInput, { color: colors.textPrimary }]}
+            placeholder="Search by category, type, or reason..."
             value={searchText}
-            onChangeText={setSearchText}
-            placeholderTextColor="#9CA3AF"
+            onChangeText={(text) => {
+              setSearchText(text);
+              setPage(0);
+            }}
+            placeholderTextColor={colors.textTertiary}
           />
           {searchText.length > 0 && (
             <TouchableOpacity onPress={() => setSearchText("")}>
-              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
@@ -308,178 +370,163 @@ const myLeaves = () => {
         <View style={styles.filtersContainer}>
           <View style={styles.filterLeft}>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[styles.filterButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => setDateModalVisible(true)}
             >
-              <Ionicons name="calendar-outline" size={16} color="#356beaff" />
-              <Text style={styles.filterButtonText}>
+              <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+              <Text style={[styles.filterButtonText, { color: colors.textPrimary }]}>
                 {startDate && endDate ? "Date Filtered" : "Filter by Date"}
               </Text>
             </TouchableOpacity>
             {(startDate || endDate) && (
               <TouchableOpacity
-                style={styles.clearFilterButton}
+                style={[styles.clearFilterButton, { backgroundColor: colors.error + '15', borderColor: colors.error + '30' }]}
                 onPress={handleResetDateRange}
               >
-                <Ionicons name="close" size={14} color="#EF4444" />
-                <Text style={styles.clearFilterText}>Clear</Text>
+                <Ionicons name="close" size={14} color={colors.error} />
+                <Text style={[styles.clearFilterText, { color: colors.error }]}>Clear</Text>
               </TouchableOpacity>
             )}
           </View>
-          <View style={styles.sortContainer}>
-            <View style={styles.pickerContainer}>
-              <Dropdown
-                data={[
-                  { label: "↑ Ascending", value: "asc" },
-                  { label: "↓ Descending", value: "desc" },
-                ]}
-                labelField={"label"}
-                valueField={"value"}
-                value={sortOrder}
-                onChange={(item) => {
-                  setSortOrder(item.value);
-                }}
-                style={styles.picker}
-                placeholder="Sort Order"
-                placeholderStyle={{ color: "#9CA3AF" }}
-                selectedTextStyle={{ color: "#111827" }}
-                itemTextStyle={{ color: "#111827" }}
-                containerStyle={styles.pickerContainer}
-              />
-            </View>
+          <View style={[styles.sortContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Dropdown
+              data={[
+                { label: "↑ Ascending", value: "asc" },
+                { label: "↓ Descending", value: "desc" },
+              ]}
+              labelField="label"
+              valueField="value"
+              value={sortOrder}
+              onChange={(item) => {
+                setSortOrder(item.value);
+                setPage(0);
+              }}
+              style={styles.picker}
+              placeholder="Sort Order"
+              placeholderStyle={{ color: colors.textTertiary }}
+              selectedTextStyle={{ color: colors.textPrimary }}
+              itemTextStyle={{ color: colors.textPrimary }}
+              containerStyle={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              itemContainerStyle={{ backgroundColor: colors.surface }}
+              activeColor={colors.primary + '20'}
+            />
           </View>
         </View>
 
-        {/* {!loading && (
-          <View style={styles.summaryContainer}>
-            <Text style={styles.summaryText}>
-              Showing {filteredContacts.length} of {user.length} contacts
-            </Text>
-          </View>
-        )} */}
+        <View style={styles.summaryContainer}>
+          <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
+            Showing {paginatedLeaves.length} of {filteredLeaves.length} leaves
+          </Text>
+        </View>
 
-        <View style={styles.tableContainer}>
-          {/* {loading ? (
+        <View style={[styles.tableContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6366F1" />
-              <Text style={styles.loadingText}>Loading contacts...</Text>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading leaves...</Text>
             </View>
-          ) : ( */}
-          <ScrollView
-            // refreshControl={
-            //   <RefreshControl
-            //     colors={["#0049e5ff"]}
-            //     refreshing={loading}
-            //     onRefresh={fetchData}
-            //   />
-            // }
-            overScrollMode="never"
-            horizontal
-            showsHorizontalScrollIndicator={true}
-            contentContainerStyle={{
-              minWidth: Math.max(width - 20, totalTableWidth),
-            }}
-          >
-            <View style={{ width: totalTableWidth }}>
-              <TableHeader />
-              {/* <LegendList
-                  data={paginatedContacts}
-                  renderItem={({ item, index }) => (
-                    <ContactRow item={item} index={index} />
-                  )}
-                  keyExtractor={(item) => item.id.toString()}
-                  showsVerticalScrollIndicator={false}
-                  recycleItems
-                /> */}
-            </View>
-          </ScrollView>
-          {/* )} */}
+          ) : (
+            <ScrollView
+              overScrollMode="never"
+              horizontal
+              showsHorizontalScrollIndicator={true}
+              contentContainerStyle={{
+                minWidth: Math.max(width - 20, totalTableWidth),
+              }}
+            >
+              <View style={{ width: totalTableWidth }}>
+                <TableHeader />
+                {filteredLeaves.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name="document-outline" size={64} color={colors.textTertiary} />
+                    <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+                      {isLeave.length === 0 ? "No leaves found" : "No matching leaves"}
+                    </Text>
+                    <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                      {isLeave.length === 0
+                        ? "Your leave list is empty."
+                        : "Try adjusting your search or filter criteria."}
+                    </Text>
+                  </View>
+                ) : (
+                  <LegendList
+                    data={paginatedLeaves}
+                    renderItem={({ item, index }) => (
+                      <LeavesRow item={item} index={index} />
+                    )}
+                    keyExtractor={(item) => item.id.toString()}
+                    showsVerticalScrollIndicator={false}
+                    recycleItems
+                  />
+                )}
+              </View>
+            </ScrollView>
+          )}
         </View>
 
-        {/* {!loading && sortedContacts.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>
-              {user.length === 0 ? "No contacts found" : "No matching contacts"}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {user.length === 0
-                ? "Your contact list is empty. Add some contacts to get started."
-                : "Try adjusting your search or filter criteria."}
-            </Text>
-          </View>
-        )} */}
-        {/* 
-        {filteredContacts.length > 0 && (
-          <View style={styles.paginationContainer}>
-            <Text style={styles.paginationInfo}>
-              {`${from + 1}-${to} of ${filteredContacts.length}`}
+        {filteredLeaves.length > 0 && (
+          <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.paginationInfo, { color: colors.textSecondary }]}>
+              {`${page * itemsPerPage + 1}-${Math.min(
+                (page + 1) * itemsPerPage,
+                filteredLeaves.length
+              )} of ${filteredLeaves.length}`}
             </Text>
             <View style={styles.paginationControls}>
               <TouchableOpacity
-                onPress={() => page > 0 && setPage(page - 1)}
+                onPress={() => setPage(page - 1)}
                 disabled={page === 0}
                 style={[
                   styles.paginationButton,
+                  { backgroundColor: colors.surfaceVariant },
                   page === 0 && styles.disabledButton,
                 ]}
               >
                 <Ionicons
                   name="chevron-back"
                   size={20}
-                  color={page === 0 ? "#D1D5DB" : "#6366F1"}
+                  color={page === 0 ? colors.textTertiary : colors.primary}
                 />
               </TouchableOpacity>
-              <Text style={styles.pageIndicator}>{page + 1}</Text>
+              <Text style={[styles.pageIndicator, { color: colors.textPrimary }]}>{page + 1}</Text>
               <TouchableOpacity
-                onPress={() =>
-                  page <
-                    Math.ceil(filteredContacts.length / itemsPerPage) - 1 &&
-                  setPage(page + 1)
-                }
-                disabled={
-                  page >= Math.ceil(filteredContacts.length / itemsPerPage) - 1
-                }
+                onPress={() => setPage(page + 1)}
+                disabled={page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1}
                 style={[
                   styles.paginationButton,
-                  page >=
-                    Math.ceil(filteredContacts.length / itemsPerPage) - 1 &&
-                    styles.disabledButton,
+                  { backgroundColor: colors.surfaceVariant },
+                  page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1 && styles.disabledButton,
                 ]}
               >
                 <Ionicons
                   name="chevron-forward"
                   size={20}
                   color={
-                    page >=
-                    Math.ceil(filteredContacts.length / itemsPerPage) - 1
-                      ? "#D1D5DB"
-                      : "#6366F1"
+                    page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1
+                      ? colors.textTertiary
+                      : colors.primary
                   }
                 />
               </TouchableOpacity>
             </View>
           </View>
-        )} */}
-      </View>
+        )}
 
-      <DateRangeModal
-        visible={dateModalVisible}
-        onClose={handleCloseModal}
-        onApply={handleApplyDateRange}
-        onReset={handleResetDateRange}
-        initialStartDate={startDate}
-        initialEndDate={endDate}
-      />
+        <DateRangeModal
+          visible={dateModalVisible}
+          onClose={handleCloseModal}
+          onApply={handleApplyDateRange}
+          initialStartDate={startDate}
+          initialEndDate={endDate}
+        />
+      </View>
     </View>
   );
 };
 
-export default myLeaves;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   content: {
     flex: 1,
@@ -488,12 +535,10 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -507,7 +552,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: "#111827",
     paddingVertical: 4,
   },
   filtersContainer: {
@@ -525,16 +569,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     marginRight: 8,
   },
   filterButtonText: {
     marginLeft: 8,
     fontSize: 14,
-    color: "#374151",
     fontWeight: "500",
   },
   clearFilterButton: {
@@ -542,32 +583,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#FEF2F2",
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#FECACA",
   },
   clearFilterText: {
     marginLeft: 4,
     fontSize: 12,
-    color: "#EF4444",
     fontWeight: "500",
   },
   sortContainer: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  sortLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginRight: 8,
-    fontWeight: "500",
-  },
-  pickerContainer: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+  },
+  pickerContainer: {
+    borderRadius: 8,
+    borderWidth: 1,
     minWidth: 100,
   },
   picker: {
@@ -579,15 +611,12 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 13,
-    color: "#6B7280",
     fontWeight: "500",
   },
   tableContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -597,42 +626,25 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#acd4ffff",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
   },
   headerCellContainer: {
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
     borderRightWidth: 1,
-    borderRightColor: "#d2ecffb8",
   },
   headerCell: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
     textAlign: "center",
-  },
-  sortableHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeSortHeader: {
-    color: "#004da4ff",
   },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    backgroundColor: "#FFFFFF",
     minHeight: 60,
-  },
-  evenRow: {
-    backgroundColor: "#FAFBFC",
   },
   cellContainer: {
     justifyContent: "center",
@@ -641,48 +653,14 @@ const styles = StyleSheet.create({
   },
   cell: {
     fontSize: 13,
-    color: "#374151",
     textAlign: "center",
     paddingHorizontal: 2,
   },
   nameCell: {
-    color: "#6366F1",
     fontWeight: "600",
   },
-  emailCell: {
-    color: "#6366F1",
-  },
   dateCell: {
-    color: "#6B7280",
     fontSize: 12,
-  },
-  actionButtons: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    width: "100%",
-    gap: 4,
-  },
-  actionIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  convertButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#EEF2FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dashText: {
-    color: "#9CA3AF",
-    fontSize: 14,
-    fontWeight: "bold",
   },
   loadingContainer: {
     flex: 1,
@@ -693,7 +671,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#6B7280",
     fontWeight: "500",
   },
   emptyContainer: {
@@ -705,13 +682,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#374151",
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: "#6B7280",
     textAlign: "center",
     lineHeight: 24,
     paddingHorizontal: 32,
@@ -722,15 +697,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     marginTop: 16,
   },
   paginationInfo: {
     fontSize: 14,
-    color: "#6B7280",
     fontWeight: "500",
   },
   paginationControls: {
@@ -741,107 +713,18 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
     marginHorizontal: 4,
   },
   disabledButton: {
-    backgroundColor: "#F9FAFB",
+    opacity: 0.5,
   },
   pageIndicator: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#374151",
     marginHorizontal: 16,
   },
-  // Updated Modal Styles
-  modalContainer: {
-    backgroundColor: "#FFFFFF",
-    padding: 24,
-    margin: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  // New style for the date range button
-  dateRangeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 24,
-  },
-  dateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 16,
-  },
-  dateButtonText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#374151",
-    fontWeight: "500",
-  },
-  modalButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    marginRight: 8,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-  modalApplyButton: {
-    flex: 1,
-    paddingVertical: 14,
-    backgroundColor: "#000000ff",
-    borderRadius: 10,
-    marginLeft: 8,
-    alignItems: "center",
-  },
-  modalApplyText: {
-    fontSize: 16,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  modalResetButton: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  modalResetText: {
-    fontSize: 16,
-    color: "#EF4444",
-    fontWeight: "600",
-  },
 });
+
+export default myLeaves;
