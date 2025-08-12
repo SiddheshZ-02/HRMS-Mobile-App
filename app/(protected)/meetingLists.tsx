@@ -28,7 +28,6 @@ const getColumnWidths = () => {
   const screenWidth = width;
   const isTablet = screenWidth > 768;
   return {
-    edit: isTablet ? 100 : 80,
     title: isTablet ? 150 : 130,
     client: isTablet ? 150 : 150,
     url: isTablet ? Math.max(180, screenWidth * 0.15) : 180,
@@ -117,7 +116,7 @@ const MeetingList = () => {
           headers: {
             "Content-Type": "application/json",
             accesstoken:
-              "VbLbaGqwnpIgDzVxv1LRIdPsWx4Vw9k5Es0W4YacuV1o01M2Rg4wBrWf3rN4",
+              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
           },
         }
       );
@@ -289,34 +288,34 @@ const MeetingList = () => {
 
   const TableHeader = () => (
     <View style={[styles.tableHeader, { backgroundColor: colors.primary + '20' }]}>
-      <View style={[styles.headerCellContainer, { width: columnWidths.edit, borderRightColor: colors.border }]}>
+      {/* <View style={[styles.headerCellContainer, { width: columnWidths.edit, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Edit</Text>
-      </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.title, borderRightColor: colors.border }]}>
+      </View> */}
+      <View style={[styles.headerCellContainer, { width: columnWidths.title, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Title</Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.client, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.client, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Client</Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.url, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.url, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>URL</Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.startdate, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.startdate, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}> Start Date </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.starttime, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.starttime, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Start Time</Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.enddate, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.enddate, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>End Date</Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.endtime, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.endtime, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>End Time</Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.recording, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.recording, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Recording</Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.description, borderRightColor: colors.border }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.description, borderRightColor: colors.textPrimary }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Description</Text>
       </View>
       <View style={[styles.headerCellContainer, { width: columnWidths.employee }]}>
@@ -340,14 +339,14 @@ const MeetingList = () => {
           borderBottomColor: colors.border 
         }
       ]}>
-        <View style={[styles.cellContainer, { width: columnWidths.edit }]}>
+        {/* <View style={[styles.cellContainer, { width: columnWidths.edit }]}>
           <TouchableOpacity
             // onPress={() => router.push(`/edit-meeting/${item.meet_id}`)}
             style={styles.cell}
           >
             <Feather name="edit" size={14} color={colors.textPrimary} />
           </TouchableOpacity>
-        </View>
+        </View> */}
         <View style={[styles.cellContainer, { width: columnWidths.title }]}>
           <Text selectable style={[styles.cell, styles.nameCell, { color: colors.primary }]}>
             {item.title}
@@ -637,11 +636,11 @@ const MeetingList = () => {
           initialEndDate={endDate}
         />
 
-        <FAB
+        {/* <FAB
           icon="plus"
           style={{ position: "absolute", margin: 16, right: 0, bottom: "12%", backgroundColor: colors.primary }}
           onPress={()=>router.push("/(protected)/createMeeting")}
-        />
+        /> */}
       </View>
     </View>
   );

@@ -22,7 +22,7 @@ export default function RootLayout() {
     //  <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
     <AutocompleteDropdownContextProvider>
       <Stack>
-        {/* <Stack.Screen name="index" options={{ headerShown: false }} /> */}
+        <Stack.Screen redirect={true} name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(protected)" options={{ headerShown: false }} />
         {/* <Stack.Screen name="+not-found" /> */}
       </Stack>

@@ -297,8 +297,8 @@ const _layout = () => {
               style={{ flexDirection: "row", alignItems: "center" }}
               onPress={toggleTheme}
             >
-              <FontAwesome5
-                name={theme === "dark" ? "sun" : "moon"}
+              <MaterialIcons
+                name={theme === "dark" ? "light-mode" : "nightlight"}
                 size={24}
                 color={colors.textPrimary}
               />

@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LegendList } from "@legendapp/list";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -9,58 +11,136 @@ import {
   TextInput,
   TouchableOpacity,
   useColorScheme,
-  View
+  View,
 } from "react-native";
-import { DatePickerModal } from "react-native-paper-dates";
-
 import { Dropdown } from "react-native-element-dropdown";
-
+import { RefreshControl } from "react-native-gesture-handler";
+import { DatePickerModal } from "react-native-paper-dates";
+import { Colors } from "../../constants/Colors";
 
 const { width } = Dimensions.get("window");
+
+interface AttendanceType {
+  id: number;
+  firstname: string;
+  lastname: string;
+  email: string;
+  currentdate: string;
+  company_id: number;
+  employee_id: number;
+  work_mode: string;
+  in_time: string;
+  out_time: string;
+  working_hours: string;
+  actual_working_hours: string;
+  attendanceDetails: {
+    id: number;
+    attendance_id: number;
+    in_time: string;
+    out_time: string;
+  }[];
+}
 
 // Responsive column widths based on screen size
 const getColumnWidths = () => {
   const screenWidth = width;
   const isTablet = screenWidth > 768;
-  if (isTablet) {
-    return {
-      date: 100,
-      intime: 120,
-      outtime: 120,
-      workinghours: Math.max(140, screenWidth * 0.15),
-      actualworkinghours: Math.max(200, screenWidth * 0.25),
-      workmode: Math.max(130, screenWidth * 0.15),
-     
-     
-    };
-  } else {
-    return {
-      date: 100,
-      intime: 100,
-      outtime: 120,
-      workinghours: 120,
-      actualworkinghours: 180,
-      workmode: 110,
-     
-    };
-  }
+  return {
+    date: isTablet ? 100 : 100,
+    intime: isTablet ? 120 : 100,
+    outtime: isTablet ? 120 : 100,
+    workinghours: isTablet ? Math.max(200, screenWidth * 0.25) : 180,
+    actualworkinghours: isTablet ? Math.max(200, screenWidth * 0.25) : 180,
+    workmode: isTablet ? Math.max(130, screenWidth * 0.15) : 110,
+  };
 };
 
-const ContactsList = () => {
-  const scheme = useColorScheme();
+// Robust date parser: supports ISO (YYYY-MM-DD) and DD-MM-YYYY (or DD/MM/YYYY)
+const parseDateString = (value: string): Date | null => {
+  if (!value) return null;
+  const direct = new Date(value);
+  if (!isNaN(direct.getTime())) return direct;
+  const parts = value.split(/[-/]/).map((p) => p.trim());
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      const year = Number(parts[0]);
+      const month = Number(parts[1]);
+      const day = Number(parts[2]);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        return new Date(year, month - 1, day);
+      }
+    } else {
+      const day = Number(parts[0]);
+      const month = Number(parts[1]);
+      const year = Number(parts[2]);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        return new Date(year, month - 1, day);
+      }
+    }
+  }
+  return null;
+};
+
+// Format date as YYYY/MM/DD
+const formatDate = (date: Date | null): string => {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
+};
+
+const Attendance = () => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<string>("name");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortColumn, setSortColumn] =
+    useState<keyof AttendanceType>("currentdate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-
+  const [data, setData] = useState<AttendanceType[]>([]);
   const [loading, setLoading] = useState(true);
   const [columnWidths, setColumnWidths] = useState(getColumnWidths());
 
-  // Update column widths on orientation change
+  const router = useRouter();
+
+  const fetchAttendance = async () => {
+    setLoading(true);
+    try {
+      const formattedStartDate = formatDate(startDate);
+      const formattedEndDate = formatDate(endDate);
+
+      if (!formattedStartDate || !formattedEndDate) {
+        setData([]);
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `https://hr.actifyzone.com/HR-API/HR/Portal/attendance?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            accesstoken:
+              "pIWUUX5ekHJWJRoPtsRrpFmRakvmL5RVGP1TIF64T9nvlLYyYLJJPlTLFwsk",
+          },
+        }
+      );
+      const res = await response.json();
+      setData(Array.isArray(res) ? res : []);
+    } catch (error) {
+      console.error("Error fetching attendance:", error);
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", () => {
       setColumnWidths(getColumnWidths());
@@ -68,72 +148,119 @@ const ContactsList = () => {
     return () => subscription?.remove();
   }, []);
 
-  // ✅ FIX 1: Removed sort state resets from useFocusEffect
   useFocusEffect(
     useCallback(() => {
+      const currentDate = new Date();
+      const sixDaysBefore = new Date();
+      sixDaysBefore.setDate(currentDate.getDate() - 6);
       setSearchText("");
-      setStartDate(null);
-      setEndDate(null);
+      setStartDate(sixDaysBefore);
+      setEndDate(currentDate);
       setPage(0);
-      // setSortColumn(""); // This was incorrectly clearing the sort state
-      // setSortOrder(""); // This was incorrectly clearing the sort state
     }, [])
   );
 
-  const Router = useRouter();
+  useEffect(() => {
+    fetchAttendance();
+  }, [startDate, endDate]);
 
-  const DateRangeModal = ({
-    visible,
-    onClose,
-    onApply,
-    onReset,
-    initialStartDate,
-    initialEndDate,
-  }: {
-    visible: boolean;
-    onClose: () => void;
-    onApply: (startDate: Date, endDate: Date) => void;
-    onReset: () => void;
-    initialStartDate: Date | null;
-    initialEndDate: Date | null;
-  }) => {
-    const onConfirm = useCallback(
-      (params: { startDate: Date; endDate: Date }) => {
-        onApply(params.startDate, params.endDate);
-        onClose();
-      },
-      [onApply, onClose]
-    );
+  // Filter and search logic
+  const filteredData = useMemo(() => {
+    let result = [...data];
 
-    return (
-      <>
-        <DatePickerModal
-          locale="en"
-          mode="range"
-          visible={visible}
-          onDismiss={onClose}
-          startDate={initialStartDate}
-          endDate={initialEndDate}
-          onConfirm={onConfirm}
-          saveLabel="Apply Range"
-          label="Select Date Range"
-          animationType="fade"
-        />
-      </>
-    );
-  };
+    if (searchText) {
+      const lowerSearch = searchText.toLowerCase();
+      result = result.filter((item) =>
+        [
+          item.firstname?.toLowerCase(),
+          item.lastname?.toLowerCase(),
+          item.email?.toLowerCase(),
+          item.work_mode?.toLowerCase(),
+        ]
+          .filter((value) => typeof value === "string")
+          .some((value) => value.includes(lowerSearch))
+      );
+    }
 
-  const from = page * itemsPerPage;
-  const to = Math.min((page + 1) * itemsPerPage);
+    if (startDate && endDate) {
+      const startBound = new Date(startDate);
+      startBound.setHours(0, 0, 0, 0);
+      const endBound = new Date(endDate);
+      endBound.setHours(23, 59, 59, 999);
+
+      result = result.filter((item) => {
+        const parsed = parseDateString(item.currentdate);
+        if (!parsed) return false;
+        const itemDay = new Date(
+          parsed.getFullYear(),
+          parsed.getMonth(),
+          parsed.getDate()
+        );
+        return itemDay >= startBound && itemDay <= endBound;
+      });
+    }
+
+    return result;
+  }, [data, searchText, startDate, endDate]);
+
+  // Sorting logic
+  const sortedData = useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      let valueA = a[sortColumn];
+      let valueB = b[sortColumn];
+
+      if (
+        sortColumn === "firstname" ||
+        sortColumn === "lastname" ||
+        sortColumn === "email" ||
+        sortColumn === "work_mode"
+      ) {
+        valueA = a[sortColumn] || "";
+        valueB = b[sortColumn] || "";
+        return sortOrder === "asc"
+          ? String(valueA).localeCompare(String(valueB))
+          : String(valueB).localeCompare(String(valueA));
+      }
+
+      if (sortColumn === "currentdate") {
+        const dateA = parseDateString(a.currentdate);
+        const dateB = parseDateString(b.currentdate);
+        if (!dateA || !dateB) return 0;
+        return sortOrder === "asc"
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      }
+
+      return sortOrder === "asc"
+        ? (valueA as number) - (valueB as number)
+        : (valueB as number) - (valueA as number);
+    });
+  }, [filteredData, sortColumn, sortOrder]);
+
+  // Pagination
+  const paginatedData = useMemo(() => {
+    const from = page * itemsPerPage;
+    return sortedData.slice(from, from + itemsPerPage);
+  }, [sortedData, page, itemsPerPage]);
+
+  // Calculate pagination text
+  const paginationText = useMemo(() => {
+    const start = page * itemsPerPage + 1;
+    const end = Math.min((page + 1) * itemsPerPage, filteredData.length);
+    return filteredData.length > 0
+      ? `${start}-${end} of ${filteredData.length}`
+      : "0-0 of 0";
+  }, [page, itemsPerPage, filteredData.length]);
 
   const handleSort = useCallback(
-    (column: string) => {
+    (column: keyof AttendanceType) => {
       if (sortColumn === column) {
         setSortOrder(sortOrder === "asc" ? "desc" : "asc");
       } else {
         setSortColumn(column);
         setSortOrder("asc");
       }
+      setPage(0);
     },
     [sortColumn, sortOrder]
   );
@@ -149,51 +276,152 @@ const ContactsList = () => {
   }, []);
 
   const handleResetDateRange = useCallback(() => {
-    setStartDate(null);
-    setEndDate(null);
+    const currentDate = new Date();
+    const sixDaysBefore = new Date();
+    sixDaysBefore.setDate(currentDate.getDate() - 6);
+    setStartDate(sixDaysBefore);
+    setEndDate(currentDate);
     setPage(0);
   }, []);
 
+  const DateRangeModal = ({
+    visible,
+    onClose,
+    onApply,
+    initialStartDate,
+    initialEndDate,
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    onApply: (startDate: Date, endDate: Date) => void;
+    initialStartDate: Date | null;
+    initialEndDate: Date | null;
+  }) => {
+    const onConfirm = useCallback(
+      (params: { startDate: any; endDate: any }) => {
+        if (params.startDate && params.endDate) {
+          onApply(new Date(params.startDate), new Date(params.endDate));
+        }
+        onClose();
+      },
+      [onApply, onClose]
+    );
+
+    return (
+      <DatePickerModal
+        locale="en"
+        mode="range"
+        visible={visible}
+        onDismiss={onClose}
+        startDate={initialStartDate as any}
+        endDate={initialEndDate as any}
+        onConfirm={onConfirm}
+        saveLabel="Apply Range"
+        label="Select Date Range"
+        animationType="fade"
+      />
+    );
+  };
+
   const TableHeader = () => (
-    <View style={styles.tableHeader}>
-      <View style={[styles.headerCellContainer, { width: columnWidths.date }]}>
-        <Text style={styles.headerCell}>Date</Text>
+    <View style={[styles.tableHeader, { backgroundColor: colors.primary + "20", }]}>
+      <View style={[styles.headerCellContainer, { width: columnWidths.date ,borderRightColor: colors.textPrimary }]}>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Date</Text>
       </View>
       <View
-        style={[styles.headerCellContainer, { width: columnWidths.intime }]}
+        style={[styles.headerCellContainer, { width: columnWidths.intime, borderRightColor: colors.textPrimary }]}
       >
-        <Text style={styles.headerCell}>In time</Text>
+        <Text  style={[styles.headerCell, { color: colors.textPrimary }]}>In time</Text>
       </View>
       <View
-        style={[styles.headerCellContainer, { width: columnWidths.outtime }]}
+        style={[styles.headerCellContainer, { width: columnWidths.outtime,borderRightColor: colors.textPrimary }]}
       >
-        <Text style={styles.headerCell}>Out Time</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]} >Out Time</Text>
       </View>
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.workinghours },
+          { width: columnWidths.workinghours,borderRightColor: colors.textPrimary  },
         ]}
       >
-        <Text style={styles.headerCell}>Working Hours</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]} >Working Hours</Text>
       </View>
 
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.actualworkinghours },
+          { width: columnWidths.actualworkinghours ,borderRightColor: colors.textPrimary },
         ]}
       >
-        <Text style={styles.headerCell}> Actual Working Hours </Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]} > Actual Working Hours </Text>
       </View>
 
       <View
-        style={[styles.headerCellContainer, { width: columnWidths.workmode }]}
+        style={[styles.headerCellContainer, { width: columnWidths.workmode,borderRightColor: colors.textPrimary  }]}
       >
-        <Text style={styles.headerCell}>Work Mode</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]} >Work Mode</Text>
       </View>
     </View>
   );
+
+  const AttendanceRow = ({
+    item,
+    index,
+  }: {
+    item: AttendanceType;
+    index: number;
+  }) => {
+    return (
+      <View
+        style={[
+          styles.tableRow,
+          {
+            backgroundColor:
+              index % 2 === 0 ? colors.surface : colors.surfaceVariant,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        <View style={[styles.cellContainer, { width: columnWidths.date }]}>
+          <Text selectable style={[styles.cell, { color: colors.primary }]}>
+            {item.currentdate}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.intime }]}>
+          <Text selectable style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.in_time}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.outtime }]}>
+          <Text selectable style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.out_time}
+          </Text>
+        </View>
+        <View
+          style={[styles.cellContainer, { width: columnWidths.workinghours }]}
+        >
+          <Text selectable style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.working_hours}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.cellContainer,
+            { width: columnWidths.actualworkinghours },
+          ]}
+        >
+          <Text selectable style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.actual_working_hours}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.workmode }]}>
+          <Text selectable style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.work_mode}
+          </Text>
+        </View>
+      </View>
+    );
+  };
 
   const totalTableWidth = Object.values(columnWidths).reduce(
     (sum, width) => sum + width,
@@ -201,25 +429,37 @@ const ContactsList = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={styles.searchContainer}>
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <Ionicons
             name="search"
             size={20}
-            color="#9CA3AF"
+            color={colors.textTertiary}
             style={styles.searchIcon}
           />
           <TextInput
-            style={styles.searchInput}
-            placeholder="Search contacts by name, email, or phone..."
+            style={[styles.searchInput, { color: colors.textPrimary }]}
+            placeholder="Search by name, email, or work mode..."
             value={searchText}
-            onChangeText={setSearchText}
-            placeholderTextColor="#9CA3AF"
+            onChangeText={(text) => {
+              setSearchText(text);
+              setPage(0);
+            }}
+            placeholderTextColor={colors.textTertiary}
           />
           {searchText.length > 0 && (
             <TouchableOpacity onPress={() => setSearchText("")}>
-              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color={colors.textTertiary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -227,178 +467,230 @@ const ContactsList = () => {
         <View style={styles.filtersContainer}>
           <View style={styles.filterLeft}>
             <TouchableOpacity
-              style={styles.filterButton}
+              style={[
+                styles.filterButton,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               onPress={() => setDateModalVisible(true)}
             >
-              <Ionicons name="calendar-outline" size={16} color="#356beaff" />
-              <Text style={styles.filterButtonText}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={colors.primary}
+              />
+              <Text
+                style={[styles.filterButtonText, { color: colors.textPrimary }]}
+              >
                 {startDate && endDate ? "Date Filtered" : "Filter by Date"}
               </Text>
             </TouchableOpacity>
             {(startDate || endDate) && (
               <TouchableOpacity
-                style={styles.clearFilterButton}
+                style={[
+                  styles.clearFilterButton,
+                  {
+                    backgroundColor: colors.error + "15",
+                    borderColor: colors.error + "30",
+                  },
+                ]}
                 onPress={handleResetDateRange}
               >
-                <Ionicons name="close" size={14} color="#EF4444" />
-                <Text style={styles.clearFilterText}>Clear</Text>
+                <Ionicons name="close" size={14} color={colors.error} />
+                <Text style={[styles.clearFilterText, { color: colors.error }]}>
+                  Clear
+                </Text>
               </TouchableOpacity>
             )}
           </View>
-          <View style={styles.sortContainer}>
-            <View style={styles.pickerContainer}>
-              <Dropdown
-                data={[
-                  { label: "↑ Ascending", value: "asc" },
-                  { label: "↓ Descending", value: "desc" },
-                ]}
-                labelField={"label"}
-                valueField={"value"}
-                value={sortOrder}
-                onChange={(item) => {
-                  setSortOrder(item.value);
-                }}
-                style={styles.picker}
-                placeholder="Sort Order"
-                placeholderStyle={{ color: "#9CA3AF" }}
-                selectedTextStyle={{ color: "#111827" }}
-                itemTextStyle={{ color: "#111827" }}
-                containerStyle={styles.pickerContainer}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* {!loading && (
-          <View style={styles.summaryContainer}>
-            <Text style={styles.summaryText}>
-              Showing {filteredContacts.length} of {user.length} contacts
-            </Text>
-          </View>
-        )} */}
-
-        <View style={styles.tableContainer}>
-          {/* {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6366F1" />
-              <Text style={styles.loadingText}>Loading contacts...</Text>
-            </View>
-          ) : ( */}
-          <ScrollView
-            // refreshControl={
-            //   <RefreshControl
-            //     colors={["#0049e5ff"]}
-            //     refreshing={loading}
-            //     onRefresh={fetchData}
-            //   />
-            // }
-            overScrollMode="never"
-            horizontal
-            showsHorizontalScrollIndicator={true}
-            contentContainerStyle={{
-              minWidth: Math.max(width - 20, totalTableWidth),
-            }}
+          <View
+            style={[
+              styles.sortContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
           >
-            <View style={{ width: totalTableWidth }}>
-              <TableHeader />
-              {/* <LegendList
-                  data={paginatedContacts}
-                  renderItem={({ item, index }) => (
-                    <ContactRow item={item} index={index} />
-                  )}
-                  keyExtractor={(item) => item.id.toString()}
-                  showsVerticalScrollIndicator={false}
-                  recycleItems
-                /> */}
-            </View>
-          </ScrollView>
-          {/* )} */}
+            <Dropdown
+              data={[
+                { label: "↑ Ascending", value: "asc" },
+                { label: "↓ Descending", value: "desc" },
+              ]}
+              labelField="label"
+              valueField="value"
+              value={sortOrder}
+              onChange={(item) => {
+                setSortOrder(item.value);
+                setPage(0);
+              }}
+              style={styles.picker}
+              placeholder="Sort Order"
+              placeholderStyle={{ color: colors.textTertiary }}
+              selectedTextStyle={{ color: colors.textPrimary }}
+              itemTextStyle={{ color: colors.textPrimary }}
+              containerStyle={[
+                styles.pickerContainer,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+              itemContainerStyle={{ backgroundColor: colors.surface }}
+              activeColor={colors.primary + "20"}
+            />
+          </View>
         </View>
 
-        {/* {!loading && sortedContacts.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>
-              {user.length === 0 ? "No contacts found" : "No matching contacts"}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {user.length === 0
-                ? "Your contact list is empty. Add some contacts to get started."
-                : "Try adjusting your search or filter criteria."}
-            </Text>
-          </View>
-        )} */}
-        {/* 
-        {filteredContacts.length > 0 && (
-          <View style={styles.paginationContainer}>
-            <Text style={styles.paginationInfo}>
-              {`${from + 1}-${to} of ${filteredContacts.length}`}
+        <View style={styles.summaryContainer}>
+          <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
+            Showing {paginatedData.length} of {filteredData.length} Records
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.tableContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text
+                style={[styles.loadingText, { color: colors.textSecondary }]}
+              >
+                Loading Attendance...
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              refreshControl={
+                <RefreshControl
+                  colors={[colors.primary]}
+                  refreshing={loading}
+                  onRefresh={fetchAttendance}
+                />
+              }
+              overScrollMode="never"
+              horizontal
+              showsHorizontalScrollIndicator={true}
+              contentContainerStyle={{
+                minWidth: Math.max(width - 20, totalTableWidth),
+              }}
+            >
+              <View style={{ width: totalTableWidth }}>
+                <TableHeader />
+                {filteredData.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={64}
+                      color={colors.textTertiary}
+                    />
+                    <Text
+                      style={[styles.emptyTitle, { color: colors.textPrimary }]}
+                    >
+                      {data.length === 0
+                        ? "No attendance records found"
+                        : "No matching records"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.emptySubtitle,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {data.length === 0
+                        ? "Your attendance list is empty."
+                        : "Try adjusting your search or filter criteria."}
+                    </Text>
+                  </View>
+                ) : (
+                  <LegendList
+                    data={paginatedData}
+                    renderItem={({ item, index }) => (
+                      <AttendanceRow item={item} index={index} />
+                    )}
+                    keyExtractor={(item) => item.id.toString()}
+                    showsVerticalScrollIndicator={false}
+                    recycleItems
+                  />
+                )}
+              </View>
+            </ScrollView>
+          )}
+        </View>
+
+        {filteredData.length > 0 && (
+          <View
+            style={[
+              styles.paginationContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text
+              style={[styles.paginationInfo, { color: colors.textSecondary }]}
+            >
+              {paginationText}
             </Text>
             <View style={styles.paginationControls}>
               <TouchableOpacity
-                onPress={() => page > 0 && setPage(page - 1)}
+                onPress={() => setPage(page - 1)}
                 disabled={page === 0}
                 style={[
                   styles.paginationButton,
+                  { backgroundColor: colors.surfaceVariant },
                   page === 0 && styles.disabledButton,
                 ]}
+                accessibilityLabel="Previous page"
               >
                 <Ionicons
                   name="chevron-back"
                   size={20}
-                  color={page === 0 ? "#D1D5DB" : "#6366F1"}
+                  color={page === 0 ? colors.textTertiary : colors.primary}
                 />
               </TouchableOpacity>
-              <Text style={styles.pageIndicator}>{page + 1}</Text>
+              <Text
+                style={[styles.pageIndicator, { color: colors.textPrimary }]}
+              >
+                {page + 1}
+              </Text>
               <TouchableOpacity
-                onPress={() =>
-                  page <
-                    Math.ceil(filteredContacts.length / itemsPerPage) - 1 &&
-                  setPage(page + 1)
-                }
+                onPress={() => setPage(page + 1)}
                 disabled={
-                  page >= Math.ceil(filteredContacts.length / itemsPerPage) - 1
+                  page >= Math.ceil(filteredData.length / itemsPerPage) - 1
                 }
                 style={[
                   styles.paginationButton,
-                  page >=
-                    Math.ceil(filteredContacts.length / itemsPerPage) - 1 &&
+                  { backgroundColor: colors.surfaceVariant },
+                  page >= Math.ceil(filteredData.length / itemsPerPage) - 1 &&
                     styles.disabledButton,
                 ]}
+                accessibilityLabel="Next page"
               >
                 <Ionicons
                   name="chevron-forward"
                   size={20}
                   color={
-                    page >=
-                    Math.ceil(filteredContacts.length / itemsPerPage) - 1
-                      ? "#D1D5DB"
-                      : "#6366F1"
+                    page >= Math.ceil(filteredData.length / itemsPerPage) - 1
+                      ? colors.textTertiary
+                      : colors.primary
                   }
                 />
               </TouchableOpacity>
             </View>
           </View>
-        )} */}
-      </View>
+        )}
 
-      <DateRangeModal
-        visible={dateModalVisible}
-        onClose={handleCloseModal}
-        onApply={handleApplyDateRange}
-        onReset={handleResetDateRange}
-        initialStartDate={startDate}
-        initialEndDate={endDate}
-      />
+        <DateRangeModal
+          visible={dateModalVisible}
+          onClose={handleCloseModal}
+          onApply={handleApplyDateRange}
+          initialStartDate={startDate}
+          initialEndDate={endDate}
+        />
+      </View>
     </View>
   );
 };
 
-export default ContactsList;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   content: {
     flex: 1,
@@ -407,12 +699,10 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -426,7 +716,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: "#111827",
     paddingVertical: 4,
   },
   filtersContainer: {
@@ -444,16 +733,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     marginRight: 8,
   },
   filterButtonText: {
     marginLeft: 8,
     fontSize: 14,
-    color: "#374151",
     fontWeight: "500",
   },
   clearFilterButton: {
@@ -461,32 +747,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#FEF2F2",
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#FECACA",
   },
   clearFilterText: {
     marginLeft: 4,
     fontSize: 12,
-    color: "#EF4444",
     fontWeight: "500",
   },
   sortContainer: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  sortLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginRight: 8,
-    fontWeight: "500",
-  },
-  pickerContainer: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+  },
+  pickerContainer: {
+    borderRadius: 8,
+    borderWidth: 1,
     minWidth: 100,
   },
   picker: {
@@ -498,15 +775,12 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 13,
-    color: "#6B7280",
     fontWeight: "500",
   },
   tableContainer: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -516,42 +790,31 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#acd4ffff",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
   },
   headerCellContainer: {
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
     borderRightWidth: 1,
-    borderRightColor: "#d2ecffb8",
   },
   headerCell: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
     textAlign: "center",
   },
   sortableHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-  },
-  activeSortHeader: {
-    color: "#004da4ff",
+    gap: 4,
   },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    backgroundColor: "#FFFFFF",
     minHeight: 60,
-  },
-  evenRow: {
-    backgroundColor: "#FAFBFC",
   },
   cellContainer: {
     justifyContent: "center",
@@ -560,48 +823,8 @@ const styles = StyleSheet.create({
   },
   cell: {
     fontSize: 13,
-    color: "#374151",
     textAlign: "center",
     paddingHorizontal: 2,
-  },
-  nameCell: {
-    color: "#6366F1",
-    fontWeight: "600",
-  },
-  emailCell: {
-    color: "#6366F1",
-  },
-  dateCell: {
-    color: "#6B7280",
-    fontSize: 12,
-  },
-  actionButtons: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    width: "100%",
-    gap: 4,
-  },
-  actionIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  convertButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#EEF2FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dashText: {
-    color: "#9CA3AF",
-    fontSize: 14,
-    fontWeight: "bold",
   },
   loadingContainer: {
     flex: 1,
@@ -612,7 +835,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#6B7280",
     fontWeight: "500",
   },
   emptyContainer: {
@@ -620,17 +842,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
+    width:"50%"
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#374151",
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: "#6B7280",
     textAlign: "center",
     lineHeight: 24,
     paddingHorizontal: 32,
@@ -641,15 +862,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
     marginTop: 16,
   },
   paginationInfo: {
     fontSize: 14,
-    color: "#6B7280",
     fontWeight: "500",
   },
   paginationControls: {
@@ -660,107 +878,18 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
     marginHorizontal: 4,
   },
   disabledButton: {
-    backgroundColor: "#F9FAFB",
+    opacity: 0.5,
   },
   pageIndicator: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#374151",
     marginHorizontal: 16,
   },
-  // Updated Modal Styles
-  modalContainer: {
-    backgroundColor: "#FFFFFF",
-    padding: 24,
-    margin: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  // New style for the date range button
-  dateRangeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 24,
-  },
-  dateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 16,
-  },
-  dateButtonText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#374151",
-    fontWeight: "500",
-  },
-  modalButtonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    marginRight: 8,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-  modalApplyButton: {
-    flex: 1,
-    paddingVertical: 14,
-    backgroundColor: "#000000ff",
-    borderRadius: 10,
-    marginLeft: 8,
-    alignItems: "center",
-  },
-  modalApplyText: {
-    fontSize: 16,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  modalResetButton: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  modalResetText: {
-    fontSize: 16,
-    color: "#EF4444",
-    fontWeight: "600",
-  },
 });
+
+export default Attendance;

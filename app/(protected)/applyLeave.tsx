@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,15 @@ import {
   useColorScheme,
   Dimensions,
   RefreshControl,
+  ToastAndroid,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { DatePickerModal } from "react-native-paper-dates";
 import { FontAwesome } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
+import { AutocompleteDropdown } from "react-native-autocomplete-dropdown";
 import { Colors } from "@/constants/Colors";
 import { useFocusEffect } from "expo-router";
+import { Badge } from "react-native-paper";
 
 const { height, width } = Dimensions.get("window");
 
@@ -42,10 +44,17 @@ interface LeaveFormType {
   reason: string;
 }
 
+interface SelectType {
+  id: string;
+  title: string;
+}
+
 export default function ApplyLeaveScreen() {
   const dimensions = getResponsiveDimensions();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+
+  const searchRef = useRef<any>(null);
 
   const {
     control,
@@ -68,7 +77,30 @@ export default function ApplyLeaveScreen() {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [formKey, setFormKey] = useState(0); // Added to force re-render
+  const [formKey, setFormKey] = useState(0);
+  const leaveCategoryDropdownController = useRef<any>(null);
+  const leaveTypeDropdownController = useRef<any>(null);
+
+  // Define leave category and type options
+  const leaveCategories: SelectType[] = [
+    { id: "1", title: "Unpaid Leave" },
+    { id: "2", title: "General Leave" },
+  ];
+
+  const leaveTypes: SelectType[] = [
+    { id: "1", title: "Half Day" },
+    { id: "2", title: "Full Day" },
+  ];
+
+  const [leaveCategorySuggestions, setLeaveCategorySuggestions] =
+    useState<SelectType[]>(leaveCategories);
+  const [leaveTypeSuggestions, setLeaveTypeSuggestions] =
+    useState<SelectType[]>(leaveTypes);
+  const [selectedLeaveCategory, setSelectedLeaveCategory] =
+    useState<SelectType | null>(null);
+  const [selectedLeaveType, setSelectedLeaveType] = useState<SelectType | null>(
+    null
+  );
 
   const formatDate = useCallback((date: Date | null) => {
     if (!date) return "dd-mm-yyyy";
@@ -97,6 +129,28 @@ export default function ApplyLeaveScreen() {
     [setValue]
   );
 
+  const filterLeaveCategorySuggestions = useCallback((query: string) => {
+    if (!query || query.length < 1) {
+      setLeaveCategorySuggestions(leaveCategories);
+      return;
+    }
+    const filtered = leaveCategories.filter((category) =>
+      category.title.toLowerCase().includes(query.toLowerCase())
+    );
+    setLeaveCategorySuggestions(filtered);
+  }, []);
+
+  const filterLeaveTypeSuggestions = useCallback((query: string) => {
+    if (!query || query.length < 1) {
+      setLeaveTypeSuggestions(leaveTypes);
+      return;
+    }
+    const filtered = leaveTypes.filter((type) =>
+      type.title.toLowerCase().includes(query.toLowerCase())
+    );
+    setLeaveTypeSuggestions(filtered);
+  }, []);
+
   const onSubmit = useCallback(
     async (data: LeaveFormType) => {
       try {
@@ -109,7 +163,8 @@ export default function ApplyLeaveScreen() {
           return `${day}/${month}/${year}`;
         };
 
-        const leaveCategory = data.leaveCategory === "unpaid leaves" ? 1 : 2;
+        const leaveCategory =
+          data.leaveCategory.toLowerCase() === "unpaid leave" ? 1 : 2;
         const submittedData = {
           leavecategory_id: leaveCategory,
           leaveType: data.leaveType,
@@ -118,7 +173,8 @@ export default function ApplyLeaveScreen() {
           reason: data.reason,
         };
 
-        console.log("Leave form submitted:", submittedData);
+        handleApplyLeave(submittedData);
+        // console.log("Leave form submitted:", submittedData);
 
         // Reset form and states
         reset({
@@ -130,10 +186,17 @@ export default function ApplyLeaveScreen() {
         });
         setStartDate(null);
         setEndDate(null);
-        setShowStartDatePicker(false);
-        setShowEndDatePicker(false);
-        setFormKey((prev) => prev + 1); // Force UI re-render
-        // Simulate async submission (e.g., API call)
+        setSelectedLeaveCategory(null);
+        setSelectedLeaveType(null);
+        setLeaveCategorySuggestions(leaveCategories);
+        setLeaveTypeSuggestions(leaveTypes);
+        if (leaveCategoryDropdownController.current) {
+          leaveCategoryDropdownController.current.clear();
+        }
+        if (leaveTypeDropdownController.current) {
+          leaveTypeDropdownController.current.clear();
+        }
+        setFormKey((prev) => prev + 1);
         await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         console.error("Error submitting form:", error);
@@ -141,6 +204,31 @@ export default function ApplyLeaveScreen() {
     },
     [reset]
   );
+
+  const handleApplyLeave = async (data: any) => {
+    try {
+      const res = await fetch(
+        `https://hr1.actifyzone.com/hr-uat/HR/Portal/leaves`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            accesstoken: "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+          },
+          body: JSON.stringify(data),
+        }
+      );
+      const result = await res.json();
+      
+      if (res.ok) {
+        ToastAndroid.show("Leave applied successfully", ToastAndroid.SHORT);
+      } else {
+        throw new Error(result.message || "Failed to Leave applied");
+      }
+    } catch (error) {
+      ToastAndroid.show("Leave application failed", ToastAndroid.SHORT);
+    }
+  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -154,10 +242,17 @@ export default function ApplyLeaveScreen() {
       });
       setStartDate(null);
       setEndDate(null);
-      setShowStartDatePicker(false);
-      setShowEndDatePicker(false);
-      setFormKey((prev) => prev + 1); // Force UI re-render
-      // Simulate an async operation (e.g., fetching data)
+      setSelectedLeaveCategory(null);
+      setSelectedLeaveType(null);
+      setLeaveCategorySuggestions(leaveCategories);
+      setLeaveTypeSuggestions(leaveTypes);
+      if (leaveCategoryDropdownController.current) {
+        leaveCategoryDropdownController.current.clear();
+      }
+      if (leaveTypeDropdownController.current) {
+        leaveTypeDropdownController.current.clear();
+      }
+      setFormKey((prev) => prev + 1);
       await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (error) {
       console.error("Error refreshing form:", error);
@@ -177,7 +272,11 @@ export default function ApplyLeaveScreen() {
       });
       setStartDate(null);
       setEndDate(null);
-      setFormKey((prev) => prev + 1); // Force UI re-render
+      setSelectedLeaveCategory(null);
+      setSelectedLeaveType(null);
+      setLeaveCategorySuggestions(leaveCategories);
+      setLeaveTypeSuggestions(leaveTypes);
+      setFormKey((prev) => prev + 1);
     }, [reset])
   );
 
@@ -241,10 +340,12 @@ export default function ApplyLeaveScreen() {
       height: dimensions.inputHeight,
     },
     dateIcon: {
+      position: "absolute",
       marginLeft: 10,
       padding: 6,
       backgroundColor: colors.surfaceVariant,
       borderRadius: 6,
+      right: 4,
     },
     button: {
       padding: 14,
@@ -274,6 +375,46 @@ export default function ApplyLeaveScreen() {
       backgroundColor: colors.surface,
       color: colors.text,
     },
+    dropdownContainer: {
+      flexGrow: 1,
+      flexShrink: 1,
+      marginBottom: dimensions.padding,
+    },
+    dropdownInputContainer: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      marginBottom: 14,
+    },
+    dropdownInput: {
+      fontSize: dimensions.fontSize.body,
+      color: colors.text,
+    },
+    dropdownRightButtonsContainer: {
+      right: 8,
+      height: 30,
+      top: 0,
+      alignSelf: "center",
+    },
+    dropdownSuggestionsContainer: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      marginTop: 4,
+      zIndex: 1000,
+      elevation: 10,
+    },
+    dropdownItemContainer: {
+      padding: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    dropdownItemText: {
+      fontSize: dimensions.fontSize.body,
+      color: colors.text,
+    },
   });
 
   return (
@@ -291,8 +432,36 @@ export default function ApplyLeaveScreen() {
           tintColor={colors.primary}
         />
       }
-      key={formKey} // Force re-render on reset
+      key={formKey}
     >
+      <View
+        style={{
+          padding: dimensions.padding,
+          marginBottom: 10,
+          backgroundColor: colors.surface,
+          borderRadius: 12,
+          shadowColor: colors.cardShadow,
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.1,
+          shadowRadius: 6,
+          elevation: 4,
+          justifyContent: "center",
+        }}
+      >
+        <Text
+          style={{
+            fontSize: dimensions.fontSize.title,
+            fontWeight: "700",
+
+            color: colors.text,
+          }}
+        >
+          General Leave
+        </Text>
+
+        <Badge>5</Badge>
+      </View>
+
       <View style={styles.formWrapper}>
         <Text style={styles.title}>Apply Leave</Text>
 
@@ -303,19 +472,59 @@ export default function ApplyLeaveScreen() {
           name="leaveCategory"
           rules={{ required: "Leave category is required" }}
           render={({ field: { onChange, value } }) => (
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={value}
-                onValueChange={onChange}
-                style={styles.picker}
-                dropdownIconColor={colors.text}
-                itemStyle={{ color: colors.text, fontSize: dimensions.fontSize.body }}
-              >
-                <Picker.Item label="Select" value="" />
-                <Picker.Item label="Unpaid Leave" value="unpaid leaves" />
-                <Picker.Item label="General Leave" value="general leaves" />
-              </Picker>
-            </View>
+            <AutocompleteDropdown
+              controller={(controller) => {
+                leaveCategoryDropdownController.current = controller;
+              }}
+              dataSet={leaveCategorySuggestions}
+              onChangeText={filterLeaveCategorySuggestions}
+              editable={false}
+              onSelectItem={(item) => {
+                if (item && item.title) {
+                  setSelectedLeaveCategory({ id: item.id, title: item.title });
+                  onChange(item.title.toLowerCase());
+                } else {
+                  setSelectedLeaveCategory(null);
+                  onChange("");
+                }
+              }}
+              debounce={300}
+              suggestionsListMaxHeight={Dimensions.get("window").height * 0.4}
+              textInputProps={{
+                placeholder: "Select leave category",
+                placeholderTextColor: colors.textTertiary,
+                autoCorrect: false,
+                autoCapitalize: "none",
+                style: styles.dropdownInput,
+                onFocus: () => {
+                  setLeaveCategorySuggestions(leaveCategories);
+                  try {
+                    leaveCategoryDropdownController.current?.open?.();
+                  } catch {}
+                },
+              }}
+              rightButtonsContainerStyle={styles.dropdownRightButtonsContainer}
+              inputContainerStyle={styles.dropdownInputContainer}
+              suggestionsListContainerStyle={
+                styles.dropdownSuggestionsContainer
+              }
+              containerStyle={styles.dropdownContainer}
+              direction="down"
+              renderItem={(item) => (
+                <View style={styles.dropdownItemContainer}>
+                  <Text style={styles.dropdownItemText}>{item.title}</Text>
+                </View>
+              )}
+              inputHeight={dimensions.inputHeight}
+              showChevron={true}
+              closeOnBlur={true}
+              clearOnFocus={false}
+              initialValue={
+                selectedLeaveCategory
+                  ? { id: selectedLeaveCategory.id }
+                  : undefined
+              }
+            />
           )}
         />
         {errors.leaveCategory && (
@@ -329,19 +538,57 @@ export default function ApplyLeaveScreen() {
           name="leaveType"
           rules={{ required: "Leave type is required" }}
           render={({ field: { onChange, value } }) => (
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={value}
-                onValueChange={onChange}
-                style={styles.picker}
-                dropdownIconColor={colors.text}
-                itemStyle={{ color: colors.text, fontSize: dimensions.fontSize.body }}
-              >
-                <Picker.Item label="Select" value="" />
-                <Picker.Item label="Half Day" value="half day" />
-                <Picker.Item label="Full Day" value="full day" />
-              </Picker>
-            </View>
+            <AutocompleteDropdown
+              controller={(controller) => {
+                leaveTypeDropdownController.current = controller;
+              }}
+              dataSet={leaveTypeSuggestions}
+              onChangeText={filterLeaveTypeSuggestions}
+              editable={false}
+              onSelectItem={(item) => {
+                if (item && item.title) {
+                  setSelectedLeaveType({ id: item.id, title: item.title });
+                  onChange(item.title.toLowerCase());
+                } else {
+                  setSelectedLeaveType(null);
+                  onChange("");
+                }
+              }}
+              debounce={300}
+              suggestionsListMaxHeight={Dimensions.get("window").height * 0.4}
+              textInputProps={{
+                placeholder: "Select leave type",
+                placeholderTextColor: colors.textTertiary,
+                autoCorrect: false,
+                autoCapitalize: "none",
+                style: styles.dropdownInput,
+                onFocus: () => {
+                  setLeaveTypeSuggestions(leaveTypes);
+                  try {
+                    leaveTypeDropdownController.current?.open?.();
+                  } catch {}
+                },
+              }}
+              rightButtonsContainerStyle={styles.dropdownRightButtonsContainer}
+              inputContainerStyle={styles.dropdownInputContainer}
+              suggestionsListContainerStyle={
+                styles.dropdownSuggestionsContainer
+              }
+              containerStyle={styles.dropdownContainer}
+              direction="down"
+              renderItem={(item) => (
+                <View style={styles.dropdownItemContainer}>
+                  <Text style={styles.dropdownItemText}>{item.title}</Text>
+                </View>
+              )}
+              inputHeight={dimensions.inputHeight}
+              showChevron={true}
+              closeOnBlur={true}
+              clearOnFocus={false}
+              initialValue={
+                selectedLeaveType ? { id: selectedLeaveType.id } : undefined
+              }
+            />
           )}
         />
         {errors.leaveType && (
@@ -366,7 +613,11 @@ export default function ApplyLeaveScreen() {
                 style={styles.dateIcon}
                 onPress={() => setShowStartDatePicker(true)}
               >
-                <FontAwesome name="calendar" size={20} color={colors.textPrimary} />
+                <FontAwesome
+                  name="calendar"
+                  size={20}
+                  color={colors.textPrimary}
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -393,7 +644,11 @@ export default function ApplyLeaveScreen() {
                 style={styles.dateIcon}
                 onPress={() => setShowEndDatePicker(true)}
               >
-                <FontAwesome name="calendar" size={20} color={colors.textPrimary} />
+                <FontAwesome
+                  name="calendar"
+                  size={20}
+                  color={colors.textPrimary}
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -430,7 +685,10 @@ export default function ApplyLeaveScreen() {
         )}
 
         {/* Submit Button */}
-        <TouchableOpacity style={styles.button} onPress={handleSubmit(onSubmit)}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleSubmit(onSubmit)}
+        >
           <Text style={styles.buttonText}>Apply</Text>
         </TouchableOpacity>
       </View>

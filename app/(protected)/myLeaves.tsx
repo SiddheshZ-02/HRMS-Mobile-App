@@ -16,6 +16,7 @@ import { DatePickerModal } from "react-native-paper-dates";
 import { Dropdown } from "react-native-element-dropdown";
 import { LegendList } from "@legendapp/list";
 import { Colors } from "../../constants/Colors";
+import { RefreshControl } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -66,13 +67,42 @@ interface leavetype {
   type: "paid";
 }
 
+// Robust date parser: supports ISO (YYYY-MM-DD) and DD-MM-YYYY (or DD/MM/YYYY)
+const parseDateString = (value: string): Date | null => {
+  if (!value) return null;
+  const direct = new Date(value);
+  if (!isNaN(direct.getTime())) return direct;
+  const parts = value.split(/[-/]/).map((p) => p.trim());
+  if (parts.length === 3) {
+    // Heuristic: if first part has 4 digits, treat as YYYY-MM-DD
+    if (parts[0].length === 4) {
+      const year = Number(parts[0]);
+      const month = Number(parts[1]);
+      const day = Number(parts[2]);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        return new Date(year, month - 1, day);
+      }
+    } else {
+      // Assume DD-MM-YYYY
+      const day = Number(parts[0]);
+      const month = Number(parts[1]);
+      const year = Number(parts[2]);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        return new Date(year, month - 1, day);
+      }
+    }
+  }
+  return null;
+};
+
 const myLeaves = () => {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme ?? "light"];
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<keyof leavetype>("leavecategory");
+  const [sortColumn, setSortColumn] =
+    useState<keyof leavetype>("leavecategory");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -109,7 +139,7 @@ const myLeaves = () => {
           headers: {
             "Content-Type": "application/json",
             accesstoken:
-              "VbLbaGqwnpIgDzVxv1LRIdPsWx4Vw9k5Es0W4YacuV1o01M2Rg4wBrWf3rN4",
+              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
           },
         }
       );
@@ -138,14 +168,23 @@ const myLeaves = () => {
         ].some((value) => value?.includes(lowerSearch))
       );
     }
+
     if (startDate && endDate) {
       const startBound = new Date(startDate);
       startBound.setHours(0, 0, 0, 0);
       const endBound = new Date(endDate);
       endBound.setHours(23, 59, 59, 999);
       result = result.filter((item) => {
-        const parsedFrom = new Date(item.dateFrom);
-        return parsedFrom >= startBound && parsedFrom <= endBound;
+        // const parsedFrom = new Date(item.dateFrom);
+        // return parsedFrom >= startBound && parsedFrom <= endBound;
+        const parsed = parseDateString(item.dateFrom);
+        if (!parsed) return false;
+        const itemDay = new Date(
+          parsed.getFullYear(),
+          parsed.getMonth(),
+          parsed.getDate()
+        );
+        return itemDay >= startBound && itemDay <= endBound;
       });
     }
     return result;
@@ -240,54 +279,105 @@ const myLeaves = () => {
   };
 
   const TableHeader = () => (
-    <View style={[styles.tableHeader, { backgroundColor: colors.primary + '20' }]}>
+    <View
+      style={[styles.tableHeader, { backgroundColor: colors.primary + "20" }]}
+    >
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.leavecategory, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.leavecategory,
+            borderRightColor: colors.border,
+          },
+        ]}
         onPress={() => handleSort("leavecategory")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Leave Category</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Leave Category
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.leavetype, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.leavetype, borderRightColor: colors.border },
+        ]}
         onPress={() => handleSort("leaveType")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Leave Type</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Leave Type
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.leaveduration, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.leaveduration,
+            borderRightColor: colors.border,
+          },
+        ]}
         onPress={() => handleSort("nDays")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Leave Duration</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Leave Duration
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.datefrom, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.datefrom, borderRightColor: colors.border },
+        ]}
         onPress={() => handleSort("dateFrom")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Date From</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Date From
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.dateto, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.dateto, borderRightColor: colors.border },
+        ]}
         onPress={() => handleSort("dateTo")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Date To</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Date To
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.reasonforleave, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.reasonforleave,
+            borderRightColor: colors.border,
+          },
+        ]}
         onPress={() => handleSort("reason")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Reason For Leave</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Reason For Leave
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.createddate, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.createddate, borderRightColor: colors.border },
+        ]}
         onPress={() => handleSort("currentdate")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Created Date</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Created Date
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.headerCellContainer, { width: columnWidths.status, borderRightColor: colors.border }]}
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.status, borderRightColor: colors.border },
+        ]}
         onPress={() => handleSort("carried_forward_leave")}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Status</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Status
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -298,36 +388,95 @@ const myLeaves = () => {
         style={[
           styles.tableRow,
           {
-            backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceVariant,
+            backgroundColor:
+              index % 2 === 0 ? colors.surface : colors.surfaceVariant,
             borderBottomColor: colors.border,
           },
         ]}
       >
-        <View style={[styles.cellContainer, { width: columnWidths.leavecategory }]}>
-          <Text style={[styles.cell, styles.nameCell, { color: colors.textPrimary }]}>{item.leavecategory}</Text>
+        <View
+          style={[styles.cellContainer, { width: columnWidths.leavecategory }]}
+        >
+          <Text
+            style={[
+              styles.cell,
+              styles.nameCell,
+              { color: colors.textPrimary },
+            ]}
+          >
+            {item.leavecategory}
+          </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.leavetype }]}>
-          <Text style={[styles.cell, { color: colors.textPrimary }]}>{item.leaveType}</Text>
+          <Text style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.leaveType}
+          </Text>
         </View>
-        <View style={[styles.cellContainer, { width: columnWidths.leaveduration }]}>
-          <Text style={[styles.cell, { color: colors.textSecondary }]}>{item.nDays}</Text>
+        <View
+          style={[styles.cellContainer, { width: columnWidths.leaveduration }]}
+        >
+          <Text style={[styles.cell, { color: colors.textSecondary }]}>
+            {item.nDays}
+          </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.datefrom }]}>
-          <Text style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>{item.dateFrom}</Text>
+          <Text
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {item.dateFrom}
+          </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.dateto }]}>
-          <Text style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>{item.dateTo}</Text>
+          <Text
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {item.dateTo}
+          </Text>
         </View>
-        <View style={[styles.cellContainer, { width: columnWidths.reasonforleave }]}>
-          <Text style={[styles.cell, { color: colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">
+        <View
+          style={[styles.cellContainer, { width: columnWidths.reasonforleave }]}
+        >
+          <Text
+            style={[styles.cell, { color: colors.textSecondary }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {item.reason}
           </Text>
         </View>
-        <View style={[styles.cellContainer, { width: columnWidths.createddate }]}>
-          <Text style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>{item.currentdate}</Text>
+        <View
+          style={[styles.cellContainer, { width: columnWidths.createddate }]}
+        >
+          <Text
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {item.currentdate}
+          </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.status }]}>
-          <Text style={[styles.cell, { color: item.carried_forward_leave === "no" ? colors.error : colors.success }]}>
+          <Text
+            style={[
+              styles.cell,
+              {
+                color:
+                  item.carried_forward_leave === "no"
+                    ? colors.error
+                    : colors.success,
+              },
+            ]}
+          >
             {item.carried_forward_leave === "no" ? "Pending" : "Success"}
           </Text>
         </View>
@@ -343,7 +492,12 @@ const myLeaves = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <Ionicons
             name="search"
             size={20}
@@ -362,7 +516,11 @@ const myLeaves = () => {
           />
           {searchText.length > 0 && (
             <TouchableOpacity onPress={() => setSearchText("")}>
-              <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color={colors.textTertiary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -370,25 +528,47 @@ const myLeaves = () => {
         <View style={styles.filtersContainer}>
           <View style={styles.filterLeft}>
             <TouchableOpacity
-              style={[styles.filterButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[
+                styles.filterButton,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               onPress={() => setDateModalVisible(true)}
             >
-              <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-              <Text style={[styles.filterButtonText, { color: colors.textPrimary }]}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={colors.primary}
+              />
+              <Text
+                style={[styles.filterButtonText, { color: colors.textPrimary }]}
+              >
                 {startDate && endDate ? "Date Filtered" : "Filter by Date"}
               </Text>
             </TouchableOpacity>
             {(startDate || endDate) && (
               <TouchableOpacity
-                style={[styles.clearFilterButton, { backgroundColor: colors.error + '15', borderColor: colors.error + '30' }]}
+                style={[
+                  styles.clearFilterButton,
+                  {
+                    backgroundColor: colors.error + "15",
+                    borderColor: colors.error + "30",
+                  },
+                ]}
                 onPress={handleResetDateRange}
               >
                 <Ionicons name="close" size={14} color={colors.error} />
-                <Text style={[styles.clearFilterText, { color: colors.error }]}>Clear</Text>
+                <Text style={[styles.clearFilterText, { color: colors.error }]}>
+                  Clear
+                </Text>
               </TouchableOpacity>
             )}
           </View>
-          <View style={[styles.sortContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.sortContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Dropdown
               data={[
                 { label: "↑ Ascending", value: "asc" },
@@ -406,9 +586,12 @@ const myLeaves = () => {
               placeholderStyle={{ color: colors.textTertiary }}
               selectedTextStyle={{ color: colors.textPrimary }}
               itemTextStyle={{ color: colors.textPrimary }}
-              containerStyle={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              containerStyle={[
+                styles.pickerContainer,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               itemContainerStyle={{ backgroundColor: colors.surface }}
-              activeColor={colors.primary + '20'}
+              activeColor={colors.primary + "20"}
             />
           </View>
         </View>
@@ -419,14 +602,30 @@ const myLeaves = () => {
           </Text>
         </View>
 
-        <View style={[styles.tableContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.tableContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading leaves...</Text>
+              <Text
+                style={[styles.loadingText, { color: colors.textSecondary }]}
+              >
+                Loading leaves...
+              </Text>
             </View>
           ) : (
             <ScrollView
+              refreshControl={
+                <RefreshControl
+                  colors={[colors.primary]}
+                  refreshing={loading}
+                  onRefresh={fetchLeave}
+                />
+              }
               overScrollMode="never"
               horizontal
               showsHorizontalScrollIndicator={true}
@@ -438,11 +637,24 @@ const myLeaves = () => {
                 <TableHeader />
                 {filteredLeaves.length === 0 ? (
                   <View style={styles.emptyContainer}>
-                    <Ionicons name="document-outline" size={64} color={colors.textTertiary} />
-                    <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                      {isLeave.length === 0 ? "No leaves found" : "No matching leaves"}
+                    <Ionicons
+                      name="people-outline"
+                      size={64}
+                      color={colors.textTertiary}
+                    />
+                    <Text
+                      style={[styles.emptyTitle, { color: colors.textPrimary }]}
+                    >
+                      {isLeave.length === 0
+                        ? "No leaves found"
+                        : "No matching leaves"}
                     </Text>
-                    <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                    <Text
+                      style={[
+                        styles.emptySubtitle,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
                       {isLeave.length === 0
                         ? "Your leave list is empty."
                         : "Try adjusting your search or filter criteria."}
@@ -465,8 +677,15 @@ const myLeaves = () => {
         </View>
 
         {filteredLeaves.length > 0 && (
-          <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.paginationInfo, { color: colors.textSecondary }]}>
+          <View
+            style={[
+              styles.paginationContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text
+              style={[styles.paginationInfo, { color: colors.textSecondary }]}
+            >
               {`${page * itemsPerPage + 1}-${Math.min(
                 (page + 1) * itemsPerPage,
                 filteredLeaves.length
@@ -488,14 +707,21 @@ const myLeaves = () => {
                   color={page === 0 ? colors.textTertiary : colors.primary}
                 />
               </TouchableOpacity>
-              <Text style={[styles.pageIndicator, { color: colors.textPrimary }]}>{page + 1}</Text>
+              <Text
+                style={[styles.pageIndicator, { color: colors.textPrimary }]}
+              >
+                {page + 1}
+              </Text>
               <TouchableOpacity
                 onPress={() => setPage(page + 1)}
-                disabled={page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1}
+                disabled={
+                  page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1
+                }
                 style={[
                   styles.paginationButton,
                   { backgroundColor: colors.surfaceVariant },
-                  page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1 && styles.disabledButton,
+                  page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1 &&
+                    styles.disabledButton,
                 ]}
               >
                 <Ionicons
@@ -678,6 +904,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
+    width: "40%",
   },
   emptyTitle: {
     fontSize: 20,

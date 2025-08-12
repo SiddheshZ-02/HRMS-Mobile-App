@@ -96,7 +96,7 @@ const holidayLists = () => {
           headers: {
             "Content-Type": "application/json",
             accesstoken:
-              "VbLbaGqwnpIgDzVxv1LRIdPsWx4Vw9k5Es0W4YacuV1o01M2Rg4wBrWf3rN4",
+              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
           },
         }
       );
@@ -188,18 +188,18 @@ const holidayLists = () => {
     return sortedHolidays.slice(from, from + itemsPerPage);
   }, [sortedHolidays, page, itemsPerPage]);
 
-  const handleSort = useCallback(
-    (column: keyof holidayType) => {
-      if (sortColumn === column) {
-        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-      } else {
-        setSortColumn(column);
-        setSortOrder("asc");
-      }
-      setPage(0);
-    },
-    [sortColumn, sortOrder]
-  );
+  // const handleSort = useCallback(
+  //   (column: keyof holidayType) => {
+  //     if (sortColumn === column) {
+  //       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+  //     } else {
+  //       setSortColumn(column);
+  //       setSortOrder("asc");
+  //     }
+  //     setPage(0);
+  //   },
+  //   [sortColumn, sortOrder]
+  // );
 
   const handleCloseModal = useCallback(() => {
     setDateModalVisible(false);
@@ -258,7 +258,7 @@ const holidayLists = () => {
 
   const TableHeader = () => (
     <View
-      style={[styles.tableHeader, { backgroundColor: colors.primary + "20" }]}
+      style={[styles.tableHeader, { backgroundColor: colors.primary + "20", }]}
     >
       {/* <View
         style={[
@@ -273,7 +273,7 @@ const holidayLists = () => {
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.date, borderRightColor: colors.border },
+          { width: columnWidths.date,borderRightColor: colors.textPrimary},
         ]}
       >
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
@@ -283,7 +283,7 @@ const holidayLists = () => {
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.day, borderRightColor: colors.border },
+          { width: columnWidths.day},
         ]}
       >
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
@@ -310,7 +310,7 @@ const holidayLists = () => {
           {
             backgroundColor:
               index % 2 === 0 ? colors.surface : colors.surfaceVariant,
-            borderBottomColor: colors.border,
+            borderBottomColor: colors.border, borderRightColor:colors.textPrimary
           },
         ]}
       >
@@ -602,22 +602,11 @@ const holidayLists = () => {
           visible={dateModalVisible}
           onClose={handleCloseModal}
           onApply={handleApplyDateRange}
-        //   onReset={handleResetDateRange}
           initialStartDate={startDate}
           initialEndDate={endDate}
         />
 
-        {/* <FAB
-          icon="plus"
-          style={{
-            position: "absolute",
-            margin: 16,
-            right: 0,
-            bottom: "12%",
-            backgroundColor: colors.primary,
-          }}
-          onPress={() => router.push("/(protected)/createMeeting")}
-        /> */}
+      
       </View>
     </View>
   );
@@ -727,6 +716,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 16,
     borderBottomWidth: 1,
+
   },
   headerCellContainer: {
     justifyContent: "center",
