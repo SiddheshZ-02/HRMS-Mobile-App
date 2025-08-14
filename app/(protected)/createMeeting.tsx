@@ -184,7 +184,7 @@ const createMeeting = () => {
           headers: {
             "Content-Type": "application/json",
             accessToken:
-              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+              "kN5YOi3SjeXjUNNjw7u82IieGZ7ZbVBogEiykwikdE2b5OOSAOKWQUdrgKDt",
           },
         }
       );
@@ -216,7 +216,7 @@ const createMeeting = () => {
           headers: {
             "Content-Type": "application/json",
             accessToken:
-              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+              "kN5YOi3SjeXjUNNjw7u82IieGZ7ZbVBogEiykwikdE2b5OOSAOKWQUdrgKDt",
           },
         }
       );

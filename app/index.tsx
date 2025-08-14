@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -5,216 +6,404 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
+  Keyboard,
+  useColorScheme,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
 } from "react-native";
-import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { toast, ToastPosition } from "@backpackapp-io/react-native-toast";
+import useAuthStore from "@/store/AuthStore";
+import { publicAxios } from "@/utils/axiosConfig";
+import { BASE_URL } from "@/constants/Config";
+
+type LoginFormData = {
+  username: string;
+  password: string;
+};
+
+const Colors = {
+  background: "#d4e4d2", // Light green background from the image
+  cardBackground: "#ffffff", // White card
+  textPrimary: "#1e293b", // Dark green text
+  textSecondary: "#6b8e6b", // Medium green for secondary text
+  textTertiary: "#9acd9a", // Light green for placeholders
+  primary: "#1e293b", // Green for buttons and icons
+  error: "#ff4040", // Red for errors
+  border: "rgba(0,0,0,0.1)", // Subtle border
+  buttonDisabled: "#334155", // Disabled button color
+};
 
 const index = () => {
   const router = useRouter();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const {
     control,
     handleSubmit,
     setValue,
     reset,
     formState: { errors },
-  } = useForm({
+  } = useForm<LoginFormData>({
     defaultValues: {
       username: "",
       password: "",
     },
   });
 
-  const handlePasswordVisibilty = () => {
+  const login = useAuthStore((state) => state.login);
+
+  const handleLogin = async (data: LoginFormData) => {
+    try {
+      setIsLoading(true);
+      const response = await publicAxios.post(`${BASE_URL}/Login/Check`, data);
+      const resData = response.data;
+
+      if (resData.status_code === 200) {
+        login({
+          accessToken: resData.accesstoken,
+          roles: resData.roles,
+          rolesId: resData.roles_id,
+          companyId: resData.company_id,
+          employeeId: resData.emp_id,
+          employeeFirstName: resData.employee_first_name,
+          imageId: resData.image_id,
+          sidebar: resData.sidebar,
+          message: resData.message,
+          statusCode: resData.status_code,
+          statusMessage: resData.status_message,
+        });
+        toast.success(resData.message || "Signed in successfully", {
+          position: ToastPosition.BOTTOM,
+          duration: 3000,
+          icon: <FontAwesome6 name="circle-check" size={24} color="#10b981" />,
+        });
+        reset();
+        router.replace("/(protected)");
+      } else {
+        toast.error(resData.message || "Login failed", {
+          position: ToastPosition.BOTTOM,
+          duration: 3000,
+          icon: (
+            <FontAwesome6
+              name="circle-exclamation"
+              size={24}
+              color={Colors.error}
+            />
+          ),
+        });
+      }
+    } catch (error: any) {
+      console.log("(auth)/index: Error while logging in", error);
+      toast("Internal server error", {
+        position: ToastPosition.BOTTOM,
+        duration: 3000,
+        icon: (
+          <FontAwesome6
+            name="circle-exclamation"
+            size={24}
+            color={Colors.error}
+          />
+        ),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onSubmit = async (data: LoginFormData) => {
+    await handleLogin(data);
+    Keyboard.dismiss();
+    if (rememberMe) {
+      await SecureStore.setItemAsync("username", data.username);
+      await SecureStore.setItemAsync("password", data.password);
+    } else {
+      await SecureStore.deleteItemAsync("username");
+      await SecureStore.deleteItemAsync("password");
+    }
+  };
+
+  const handlePasswordVisibility = () => {
     setIsPasswordVisible(!isPasswordVisible);
   };
 
-  const onSubmit = () => {
-    router.push("/(protected)/attendance");
+  const setData = async () => {
+    const username = await SecureStore.getItemAsync("username");
+    const password = await SecureStore.getItemAsync("password");
+    if (username && password) {
+      setValue("username", username);
+      setValue("password", password);
+    }
   };
 
-  return (
-    <View
-      style={{
-        flex: 1,
-        display: "flex",
-        justifyContent: "center",
-        padding: 8,
-        margin: 4,
-        borderRadius: 5,
-        backgroundColor: "#ffffff",
-      }}
-    >
-      <Text
-        style={{
-          margin: 15,
-          marginBottom: 10,
-          fontWeight: "bold",
-          color: "black",
-        }}
-      >
-        UserName
-      </Text>
+  useEffect(() => {
+    setData();
+  }, []);
 
-      <Controller
-        control={control}
-        name="username"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            inputMode="email"
-            onChangeText={(value) => onChange(value)}
-            value={value}
-            onBlur={onBlur}
-            placeholder="Enter Your Usename"
-            placeholderTextColor={"grey"}
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={[styles.container]}>
+          <View
             style={{
-              backgroundColor: "#ffffff",
-              borderColor: "rgba(124, 124, 124, 0.27)",
-              borderWidth: 1,
-              height: 40,
-              padding: 10,
-              borderRadius: 4,
-              color: "black",
-              marginHorizontal: 10,
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "40%",
+              zIndex: -1,
+              // borderBottomLeftRadius: 100,
             }}
           />
-        )}
-        rules={{ required: true }}
-      />
-      {errors.username && (
-        <Text style={{ color: "red", marginLeft: 11, marginTop: 5 }}>
-          Email is Required
-        </Text>
-      )}
-
-      <Text
-        style={{
-          margin: 15,
-          marginBottom: 10,
-          fontWeight: "bold",
-          color: "black",
-        }}
-      >
-        Password
-      </Text>
-      <View
-        style={{
-          position: "relative",
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <Controller
-          name="password"
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              onChangeText={(value) => onChange(value)}
-              value={value}
-              onBlur={onBlur}
-              placeholder="*****"
-              placeholderTextColor={"grey"}
-              style={{
-                backgroundColor: "#ffffff",
-                borderColor: "rgba(124, 124, 124, 0.27)",
-                borderWidth: 1,
-                height: 40,
-                padding: 10,
-                borderRadius: 4,
-                color: "black",
-                marginHorizontal: 10,
-              }}
-              autoComplete="current-password"
-              secureTextEntry={!isPasswordVisible}
+          <View
+            style={{
+              backgroundColor: "#0f172a",
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "60%",
+              zIndex: -1,
+              borderTopLeftRadius: 100,
+            }}
+          />
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("@/assets/images/actifylogo.png")}
+              style={styles.logo}
             />
-          )}
-          rules={{ required: true }}
-        />
-
-        <TouchableOpacity
-          onPress={handlePasswordVisibilty}
-          style={{ display: "flex", position: "absolute", right: "6%" }}
-        >
-          {isPasswordVisible ? (
-            <Ionicons name="eye-off" size={24} color="#2e63a8" />
-          ) : (
-            <Ionicons name="eye" size={24} color="#2e63a8" />
-          )}
-        </TouchableOpacity>
-      </View>
-      {errors.password && (
-        <Text style={{ color: "red", margin: 11, marginTop: 5 }}>
-          Password is required
-        </Text>
-      )}
-
-      <TouchableOpacity
-        onPress={() => {
-          setRememberMe(!rememberMe);
-        }}
-        style={{
-          margin: 10,
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 4,
-          justifyContent: "flex-start",
-          maxWidth: "50%",
-        }}
-      >
-        {rememberMe ? (
-          <Ionicons name="checkbox" size={20} />
-        ) : (
-          <Ionicons name="square-outline" size={20} />
-        )}
-        <Text style={{ textAlign: "left" }}>Remember Me</Text>
-      </TouchableOpacity>
-      <View
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 10,
-        }}
-      >
-        <TouchableOpacity
-          style={{
-            margin: "auto",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#0e1689ff",
-            width: "100%",
-            padding: 8,
-            marginTop: 10,
-            borderRadius: 5,
-          }}
-          onPress={handleSubmit(onSubmit)}
-        >
-          {loading ? (
-            <ActivityIndicator size={"small"} />
-          ) : (
-            <Text
-              style={{
-                textAlign: "center",
-                color: "white",
-                fontWeight: "bold",
-                fontSize: 15,
-                padding: 2,
-              }}
-            >
-              Login
+          </View>
+          <View
+            style={[
+              styles.formContainer,
+              { backgroundColor: Colors.cardBackground },
+            ]}
+          >
+            <Text style={[styles.label, { color: Colors.textPrimary }]}>
+              Username <Text style={{ color: Colors.error }}>*</Text>
             </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  inputMode="email"
+                  style={[
+                    styles.input,
+                    { borderColor: Colors.border, color: Colors.textPrimary },
+                    errors.username && styles.inputError,
+                  ]}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  placeholder="Enter your username"
+                  placeholderTextColor={Colors.primary}
+                  editable={!isLoading}
+                />
+              )}
+              name="username"
+              rules={{
+                required: "Email is required",
+                pattern: {
+                  value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                  message: "Invalid email address",
+                },
+              }}
+            />
+            {errors.username && (
+              <Text style={[styles.errorText, { color: Colors.error }]}>
+                {errors.username.message}
+              </Text>
+            )}
+            <Text style={[styles.label, { color: Colors.textPrimary }]}>
+              Password <Text style={{ color: Colors.error }}>*</Text>
+            </Text>
+            <View style={styles.passwordContainer}>
+              <Controller
+                control={control}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    autoComplete="current-password"
+                    secureTextEntry={!isPasswordVisible}
+                    style={[
+                      styles.input,
+                      { borderColor: Colors.border, color: Colors.textPrimary },
+                      errors.password && styles.inputError,
+                    ]}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    placeholder="Enter your password"
+                    placeholderTextColor={Colors.primary}
+                    editable={!isLoading}
+                  />
+                )}
+                name="password"
+                rules={{
+                  required: "Password is required",
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters",
+                  },
+                }}
+              />
+              <TouchableOpacity
+                onPress={handlePasswordVisibility}
+                style={styles.eyeIcon}
+                disabled={isLoading}
+              >
+                <Ionicons
+                  name={isPasswordVisible ? "eye-off" : "eye"}
+                  size={22}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.password && (
+              <Text style={[styles.errorText, { color: Colors.error }]}>
+                {errors.password.message}
+              </Text>
+            )}
+            <TouchableOpacity
+              onPress={() => setRememberMe(!rememberMe)}
+              style={styles.rememberMeContainer}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name={rememberMe ? "checkbox" : "square-outline"}
+                size={20}
+                color={rememberMe ? Colors.primary : Colors.primary}
+              />
+              <Text style={[styles.rememberMeText, { color: Colors.primary }]}>
+                Remember me
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.loginBtn,
+                isLoading && { backgroundColor: Colors.buttonDisabled },
+              ]}
+              onPress={handleSubmit(onSubmit)}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.loginBtnText}>LOGIN</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
-export default index;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 70,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  logo: {
+    width: 200,
+    height: 150,
+    resizeMode: "contain",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginTop: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginTop: 8,
+  },
+  formContainer: {
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    alignItems: "center",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+    marginTop: 16,
+    alignSelf: "flex-start",
+  },
+  input: {
+    // backgroundColor: "#f0f8f0",
+    borderRadius: 8,
+    height: 48,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    width: "100%",
+  },
+  inputError: {
+    borderColor: Colors.error,
+  },
+  passwordContainer: {
+    position: "relative",
+    width: "100%",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 12,
+    top: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
+    alignSelf: "flex-start",
+  },
+  rememberMeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginVertical: 16,
+    alignSelf: "flex-start",
+  },
+  rememberMeText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  loginBtn: {
+    backgroundColor: "#1e293b",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    width: "100%",
+  },
+  loginBtnText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});
 
-const styles = StyleSheet.create({});
+export default index;

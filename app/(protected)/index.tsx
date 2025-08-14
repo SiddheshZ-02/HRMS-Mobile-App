@@ -1,21 +1,28 @@
+// File: src/app/(protected)/index.tsx
 
-
-
-import { AntDesign, FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import useAuthStore from "@/store/AuthStore";
+import {
+  AntDesign,
+  FontAwesome5,
+  Ionicons,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    Linking,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useColorScheme
+  ActivityIndicator,
+  Dimensions,
+  Linking,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useColorScheme,
 } from "react-native";
+import { privateAxios } from "@/utils/axiosConfig";
+import { BASE_URL } from "@/constants/Config";
 
 const { width } = Dimensions.get("window");
 
@@ -50,28 +57,28 @@ interface dataType {
 
 const Colors = {
   light: {
-    background: '#ffffff',
-    surface: '#f9fafb',
-    surfaceVariant: '#f3f4f6',
-    textPrimary: '#1e293b',
-    textSecondary: '#475569',
-    textTertiary: '#94a3b8',
+    background: "#ffffff",
+    surface: "#f9fafb",
+    surfaceVariant: "#f3f4f6",
+    textPrimary: "#1e293b",
+    textSecondary: "#475569",
+    textTertiary: "#94a3b8",
   },
   dark: {
-    background: '#1e293b',
-    surface: '#334155',
-    surfaceVariant: '#4b5563',
-    textPrimary: '#f9fafb',
-    textSecondary: '#d1d5db',
-    textTertiary: '#9ca3af',
+    background: "#1e293b",
+    surface: "#334155",
+    surfaceVariant: "#4b5563",
+    textPrimary: "#f9fafb",
+    textSecondary: "#d1d5db",
+    textTertiary: "#9ca3af",
   },
 };
 
 const BrandColors = {
-  primary: '#3b82f6',
-  warning: '#f59e0b',
-  success: '#10b981',
-  accent: '#8b5cf6',
+  primary: "#3b82f6",
+  warning: "#f59e0b",
+  success: "#10b981",
+  accent: "#8b5cf6",
 };
 
 const index = () => {
@@ -79,78 +86,67 @@ const index = () => {
   const [error, setError] = useState<string | null>(null);
   const [holiday, setHoliday] = useState<holidayType[]>([]);
   const [data, setData] = useState<dataType[]>([]);
-  const [expandedItems, setExpandedItems] = useState<{ [key: number]: boolean }>({});
+  const [expandedItems, setExpandedItems] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme ?? "light"];
 
-  // Mock data for statistics
-  const stats = {
-    totalMeetings: data.length,
-    upcomingMeetings: data.filter(item => new Date(item.expected_start_date) > new Date()).length,
-    totalHolidays: holiday.length,
-    thisMonthHolidays: holiday.filter(item => {
-      const holidayDate = new Date(item.dateInYears);
-      const now = new Date();
-      return holidayDate.getMonth() === now.getMonth() && holidayDate.getFullYear() === now.getFullYear();
-    }).length,
-  };
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+
+
 
   // Fetch meeting
   const fetchMeeting = async () => {
     setLoading(true);
-    setError(null);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat/HR/Portal/project/manager/meeting",
+        BASE_URL + `/project/manager/meeting`,
+        // "https://hr1.actifyzone.com/hr-uat/HR/Portal/project/manager/meeting",
         {
           method: "GET",
           headers: {
-            "content-type": "application/json",
-            accesstoken:
-              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+            "Content-Type": "application/json",
+            accesstoken: accessToken || "",
           },
         }
       );
-      if (!response.ok) throw new Error("Failed to fetch meetings");
       const res = await response.json();
       setData(Array.isArray(res) ? res : []);
     } catch (error) {
-      console.log("Error fetching meetings:", error);
-      setError("Failed to load meetings. Please try again.");
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch Holiday
-  const fetchHoliday = async () => {
+
+
+   const fetchHoliday = async () => {
     setLoading(true);
-    setError(null);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat/HR/Portal/holidays/month/list",
+        BASE_URL + `/holidays/month/list`,
+        // "https://hr1.actifyzone.com/hr-uat/HR/Portal/holidays/month/list",
         {
           method: "GET",
           headers: {
-            "content-type": "application/json",
-            accesstoken:
-              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+            "Content-Type": "application/json",
+            accesstoken: accessToken || "",
           },
         }
       );
-      if (!response.ok) throw new Error("Failed to fetch holidays");
       const res = await response.json();
       setHoliday(Array.isArray(res) ? res : []);
     } catch (error) {
-      console.log("Error fetching holidays:", error);
-      setError("Failed to load holidays. Please try again.");
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchMeeting();
     fetchHoliday();
@@ -163,70 +159,65 @@ const index = () => {
     }));
   };
 
-  // const StatCard = ({ title, value, icon, color, subtitle }: any) => (
-  //   <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-  //     <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
-  //       <Ionicons name={icon} size={24} color={color} />
-  //     </View>
-  //     <View style={styles.statContent}>
-  //       <Text style={[styles.statValue, { color: colors.textPrimary }]}>{value}</Text>
-  //       <Text style={[styles.statTitle, { color: colors.textSecondary }]}>{title}</Text>
-  //       {subtitle && (
-  //         <Text style={[styles.statSubtitle, { color: colors.textTertiary }]}>{subtitle}</Text>
-  //       )}
-  //     </View>
-  //   </View>
-  // );
-
   const MeetingCard = ({ item, index }: { item: dataType; index: number }) => {
-              const isExpanded = expandedItems[item.meet_id] || false;
+    const isExpanded = expandedItems[item.meet_id] || false;
     const isUpcoming = new Date(item.expected_start_date) > new Date();
 
-              return (
+    return (
       <View style={[styles.meetingCard, { backgroundColor: colors.surface }]}>
-                  <View style={styles.meetingRow}>
-                    <View style={styles.meetingDetails}>
+        <View style={styles.meetingRow}>
+          <View style={styles.meetingDetails}>
             <View style={styles.meetingTitleRow}>
               <MaterialIcons
                 name="event"
                 size={16}
                 color={isUpcoming ? BrandColors.warning : BrandColors.success}
               />
-              <Text style={[styles.meetingTitle, { color: colors.textPrimary }]}>
+              <Text
+                style={[styles.meetingTitle, { color: colors.textPrimary }]}
+              >
                 {item.title}
               </Text>
             </View>
-            <Text style={[styles.meetingDescription, { color: colors.textSecondary }]}>
-                        {/* {item.description} */}
-              Process flow performance management
-                      </Text>
-                    </View>
-                    <View style={styles.rightSection}>
+            <Text
+              style={[
+                styles.meetingDescription,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {item.description}
+            </Text>
+          </View>
+          <View style={styles.rightSection}>
             <Text style={[styles.meetingDate, { color: colors.textTertiary }]}>
-              {/* {new Date(item.expected_start_date).toLocaleDateString()} */}
-                        {item.expected_start_date}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          if (item.url) Linking.openURL(item.url);
-                        }}
-              style={[styles.linkButton, { backgroundColor: BrandColors.primary }]}
-                      >
-                        <Text style={styles.linkButtonText}>Join</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+              {item.expected_start_date}
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                if (item.url) Linking.openURL(item.url);
+              }}
+              style={[
+                styles.linkButton,
+                { backgroundColor: BrandColors.primary },
+              ]}
+            >
+              <Text style={styles.linkButtonText}>Join</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {item.employee_id.length > 0 && (
-                  <TouchableOpacity
-                    style={styles.dropdownHeader}
-                    onPress={() => toggleDropdown(item.meet_id)}
-                  >
-            <Text style={[styles.employeeTitle, { color: colors.textSecondary }]}>
+          <TouchableOpacity
+            style={styles.dropdownHeader}
+            onPress={() => toggleDropdown(item.meet_id)}
+          >
+            <Text
+              style={[styles.employeeTitle, { color: colors.textSecondary }]}
+            >
               {item.employee_id.length} Participants
             </Text>
-                      <MaterialIcons
-                        name={isExpanded ? "expand-less" : "expand-more"}
-                        size={20}
+            <MaterialIcons
+              name={isExpanded ? "expand-less" : "expand-more"}
+              size={20}
               color={colors.textTertiary}
             />
           </TouchableOpacity>
@@ -235,14 +226,27 @@ const index = () => {
           <View style={styles.employeeList}>
             {item.employee_id.map((emp) => (
               <View key={emp.id} style={styles.employeeItem}>
-                <View style={[styles.employeeAvatar, { backgroundColor: BrandColors.primary + '20' }]}>
-                  <Text style={[styles.employeeInitial, { color: BrandColors.primary }]}>
-                    {emp.firstname.charAt(0)}{emp.lastname.charAt(0)}
+                <View
+                  style={[
+                    styles.employeeAvatar,
+                    { backgroundColor: BrandColors.primary + "20" },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.employeeInitial,
+                      { color: BrandColors.primary },
+                    ]}
+                  >
+                    {emp.firstname.charAt(0)}
+                    {emp.lastname.charAt(0)}
                   </Text>
                 </View>
-                <Text style={[styles.employeeName, { color: colors.textPrimary }]}>
+                <Text
+                  style={[styles.employeeName, { color: colors.textPrimary }]}
+                >
                   {emp.firstname} {emp.lastname}
-                      </Text>
+                </Text>
               </View>
             ))}
           </View>
@@ -256,44 +260,75 @@ const index = () => {
       <View style={styles.holidayRow}>
         <View style={styles.holidayDetails}>
           <View style={styles.holidayTitleRow}>
-            <FontAwesome5 name="calendar-day" size={16} color={BrandColors.warning} />
+            <FontAwesome5
+              name="calendar-day"
+              size={16}
+              color={BrandColors.warning}
+            />
             <Text style={[styles.holidayTitle, { color: colors.textPrimary }]}>
               {item.days}
             </Text>
           </View>
-          <Text style={[styles.holidayDescription, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.holidayDescription, { color: colors.textSecondary }]}
+          >
             {item.dateInYears}
           </Text>
         </View>
-        <View style={[styles.linkButtonDisabled, { backgroundColor: BrandColors.warning + '20' }]}>
-          <Text style={[styles.linkButtonText, { color: BrandColors.warning }]}>Holiday</Text>
+        <View
+          style={[
+            styles.linkButtonDisabled,
+            { backgroundColor: BrandColors.warning + "20" },
+          ]}
+        >
+          <Text style={[styles.linkButtonText, { color: BrandColors.warning }]}>
+            Holiday
+          </Text>
         </View>
       </View>
-                </View>
-              );
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-      {/* Header */}
-    
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-     
-
         {/* Meeting Section */}
         <View style={styles.sectionWrapper}>
-          <View style={[styles.sectionHeader, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.sectionHeader, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.headerLeft}>
-              <View style={[styles.sectionIcon, { backgroundColor: BrandColors.primary + '15' }]}>
-                <MaterialIcons name="event" size={20} color={BrandColors.primary} />
+              <View
+                style={[
+                  styles.sectionIcon,
+                  { backgroundColor: BrandColors.primary + "15" },
+                ]}
+              >
+                <MaterialIcons
+                  name="event"
+                  size={20}
+                  color={BrandColors.primary}
+                />
               </View>
               <View>
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Meetings</Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textPrimary }]}
+                >
+                  Meetings
+                </Text>
+                <Text
+                  style={[
+                    styles.sectionSubtitle,
+                    { color: colors.textTertiary },
+                  ]}
+                >
                   {data.length} meetings scheduled
                 </Text>
               </View>
@@ -302,33 +337,62 @@ const index = () => {
               onPress={() => router.push("/(protected)/meetingLists")}
               style={styles.viewAllButton}
             >
-              <Text style={[styles.viewAllText, { color: BrandColors.primary }]}>View all</Text>
+              <Text
+                style={[styles.viewAllText, { color: BrandColors.primary }]}
+              >
+                View all
+              </Text>
               <AntDesign name="right" size={14} color={BrandColors.primary} />
             </TouchableOpacity>
           </View>
-          <View style={[styles.sectionBody,{ backgroundColor: colors.surfaceVariant }]}>
+          <View
+            style={[
+              styles.sectionBody,
+              { backgroundColor: colors.surfaceVariant },
+            ]}
+          >
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={BrandColors.primary} />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.loadingText, { color: colors.textSecondary }]}
+                >
                   Loading meetings...
-              </Text>
+                </Text>
               </View>
             ) : error ? (
               <View style={styles.errorContainer}>
-                <Text style={[styles.errorText, { color: colors.textPrimary }]}>{error}</Text>
+                <Text style={[styles.errorText, { color: colors.textPrimary }]}>
+                  {error}
+                </Text>
                 <TouchableOpacity
                   onPress={fetchMeeting}
-                  style={[styles.retryButton, { backgroundColor: BrandColors.primary }]}
+                  style={[
+                    styles.retryButton,
+                    { backgroundColor: BrandColors.primary },
+                  ]}
                 >
                   <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
+                </TouchableOpacity>
               </View>
             ) : data.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="calendar-outline" size={48} color={colors.textTertiary} />
-                <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Meetings</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={48}
+                  color={colors.textTertiary}
+                />
+                <Text
+                  style={[styles.emptyTitle, { color: colors.textPrimary }]}
+                >
+                  No Meetings
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtitle,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   You don't have any meetings scheduled yet
                 </Text>
               </View>
@@ -342,86 +406,153 @@ const index = () => {
                     onPress={() => router.push("/(protected)/meetingLists")}
                     style={styles.viewMoreButton}
                   >
-                    <Text style={[styles.viewMoreText, { color: BrandColors.primary }]}>
+                    <Text
+                      style={[
+                        styles.viewMoreText,
+                        { color: BrandColors.primary },
+                      ]}
+                    >
                       View {data.length - 3} more meetings
                     </Text>
-                    <AntDesign name="doubleright" size={14} color={BrandColors.primary} />
+                    <AntDesign
+                      name="doubleright"
+                      size={14}
+                      color={BrandColors.primary}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
             )}
           </View>
-      </View>
+        </View>
 
-      {/* Holiday Section */}
-      <View style={styles.sectionWrapper}>
-          <View style={[styles.sectionHeader, { backgroundColor: colors.surface }]}>
-          <View style={styles.headerLeft}>
-              <View style={[styles.sectionIcon, { backgroundColor: BrandColors.warning + '15' }]}>
-                <FontAwesome5 name="calendar-day" size={20} color={BrandColors.warning} />
+        {/* Holiday Section */}
+        <View style={styles.sectionWrapper}>
+          <View
+            style={[styles.sectionHeader, { backgroundColor: colors.surface }]}
+          >
+            <View style={styles.headerLeft}>
+              <View
+                style={[
+                  styles.sectionIcon,
+                  { backgroundColor: BrandColors.warning + "15" },
+                ]}
+              >
+                <FontAwesome5
+                  name="calendar-day"
+                  size={20}
+                  color={BrandColors.warning}
+                />
               </View>
               <View>
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Holidays</Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textPrimary }]}
+                >
+                  Holidays
+                </Text>
+                <Text
+                  style={[
+                    styles.sectionSubtitle,
+                    { color: colors.textTertiary },
+                  ]}
+                >
                   {holiday.length} holidays this month
                 </Text>
               </View>
-          </View>
+            </View>
             <TouchableOpacity
               onPress={() => router.push("/(protected)/holidayLists")}
               style={styles.viewAllButton}
             >
-              <Text style={[styles.viewAllText, { color: BrandColors.primary }]}>View all</Text>
+              <Text
+                style={[styles.viewAllText, { color: BrandColors.primary }]}
+              >
+                View all
+              </Text>
               <AntDesign name="right" size={14} color={BrandColors.primary} />
-          </TouchableOpacity>
-        </View>
-          <View style={[styles.sectionBody,{ backgroundColor: colors.surfaceVariant }] }>
+            </TouchableOpacity>
+          </View>
+          <View
+            style={[
+              styles.sectionBody,
+              { backgroundColor: colors.surfaceVariant },
+            ]}
+          >
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={BrandColors.primary} />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.loadingText, { color: colors.textSecondary }]}
+                >
                   Loading holidays...
-                    </Text>
-                  </View>
+                </Text>
+              </View>
             ) : error ? (
               <View style={styles.errorContainer}>
-                <Text style={[styles.errorText, { color: colors.textPrimary }]}>{error}</Text>
+                <Text style={[styles.errorText, { color: colors.textPrimary }]}>
+                  {error}
+                </Text>
                 <TouchableOpacity
                   onPress={fetchHoliday}
-                  style={[styles.retryButton, { backgroundColor: BrandColors.primary }]}
+                  style={[
+                    styles.retryButton,
+                    { backgroundColor: BrandColors.primary },
+                  ]}
                 >
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
-                    </View>
+              </View>
             ) : holiday.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="sunny-outline" size={48} color={colors.textTertiary} />
-                <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Holidays</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                <Ionicons
+                  name="sunny-outline"
+                  size={48}
+                  color={colors.textTertiary}
+                />
+                <Text
+                  style={[styles.emptyTitle, { color: colors.textPrimary }]}
+                >
+                  No Holidays
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtitle,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   No holidays scheduled for this period
                 </Text>
-                  </View>
+              </View>
             ) : (
               <View style={styles.cardsContainer}>
                 {holiday.slice(0, 3).map((item) => (
                   <HolidayCard key={item.id} item={item} />
                 ))}
                 {holiday.length > 3 && (
-            <TouchableOpacity
-                    // onPress={() => router.push("/(protected)/holidayLists")}
+                  <TouchableOpacity
+                    onPress={() => router.push("/(protected)/holidayLists")}
                     style={styles.viewMoreButton}
-            >
-                    <Text style={[styles.viewMoreText, { color: BrandColors.primary }]}>
+                  >
+                    <Text
+                      style={[
+                        styles.viewMoreText,
+                        { color: BrandColors.primary },
+                      ]}
+                    >
                       View {holiday.length - 3} more holidays
-              </Text>
-                    <AntDesign name="doubleright" size={14} color={BrandColors.primary} />
-            </TouchableOpacity>
+                    </Text>
+                    <AntDesign
+                      name="doubleright"
+                      size={14}
+                      color={BrandColors.primary}
+                    />
+                  </TouchableOpacity>
                 )}
               </View>
-          )}
+            )}
           </View>
         </View>
-        </ScrollView>
+      </ScrollView>
     </View>
   );
 };
@@ -437,16 +568,16 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
   headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   logo: {
@@ -456,19 +587,19 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 2,
   },
   notificationButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollView: {
     flex: 1,
@@ -480,8 +611,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   statCard: {
@@ -490,8 +621,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
+    borderColor: "rgba(0,0,0,0.05)",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -501,8 +632,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 12,
   },
   statContent: {
@@ -510,32 +641,32 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   statTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 2,
   },
   statSubtitle: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   sectionWrapper: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     marginBottom: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
@@ -544,28 +675,28 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   sectionSubtitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 2,
   },
   viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   viewAllText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginRight: 4,
   },
   sectionBody: {
@@ -579,50 +710,47 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
+    borderColor: "rgba(0,0,0,0.05)",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
   meetingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-   
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   meetingDetails: {
     flex: 1,
     // paddingRight: 12,
   },
   meetingTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   meetingTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginLeft: 8,
     flex: 1,
   },
   meetingDescription: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     // marginLeft: 24,
   },
   rightSection: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    alignItems: "flex-end",
+    justifyContent: "center",
     gap: 12,
   },
   meetingDate: {
-
     fontSize: 12,
-    fontWeight: '500',
-    width:"60%",
-
+    fontWeight: "500",
+    width: "60%",
   },
   linkButton: {
     paddingVertical: 8,
@@ -630,81 +758,81 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   linkButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: "#ffffff",
+    fontWeight: "600",
     fontSize: 14,
   },
   dropdownHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    borderTopColor: "rgba(0,0,0,0.05)",
   },
   employeeTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   employeeList: {
     marginTop: 12,
     gap: 8,
   },
   employeeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingLeft: 24,
   },
   employeeAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   employeeInitial: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   employeeName: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   holidayCard: {
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
+    borderColor: "rgba(0,0,0,0.05)",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
   holidayRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   holidayDetails: {
     flex: 1,
     paddingRight: 12,
   },
   holidayTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   holidayTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginLeft: 8,
   },
   holidayDescription: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginLeft: 24,
   },
   linkButtonDisabled: {
@@ -713,7 +841,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   loadingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
   },
   loadingText: {
@@ -721,12 +849,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   errorContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
   },
   errorText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 12,
   },
   retryButton: {
@@ -735,38 +863,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   retryButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
   },
   viewMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    backgroundColor: 'rgba(0,0,0,0.02)',
+    borderColor: "rgba(0,0,0,0.1)",
+    backgroundColor: "rgba(0,0,0,0.02)",
   },
   viewMoreText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginRight: 4,
   },
 });

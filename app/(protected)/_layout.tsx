@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/Colors";
 import {
+  Entypo,
   FontAwesome5,
   MaterialCommunityIcons,
   MaterialIcons,
@@ -24,16 +25,24 @@ import {
   useColorScheme,
 } from "react-native";
 import Collapsible from "react-native-collapsible";
+import { toast, ToastPosition } from "@backpackapp-io/react-native-toast";
+import useAuthStore from "@/store/AuthStore";
+import { en, registerTranslation } from "react-native-paper-dates";
+
+registerTranslation("en", en);
 
 const _layout = () => {
   const [isLeavesCollaps, setIsLeavesCollaps] = useState(true);
+  const [isWFHCollaps, setIsWFHCollaps] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
   const path = usePathname();
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState(systemColorScheme ?? "light");
   const colors = Colors[theme];
 
-  // Load theme from AsyncStorage on mount
+  const { logout, companyId, accessToken } = useAuthStore();
+
   useEffect(() => {
     const loadTheme = async () => {
       try {
@@ -52,7 +61,6 @@ const _layout = () => {
     loadTheme();
   }, [systemColorScheme]);
 
-  // Function to toggle and save theme
   const toggleTheme = async () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     try {
@@ -61,6 +69,16 @@ const _layout = () => {
       Appearance.setColorScheme(newTheme);
     } catch (error) {
       console.error("Failed to save theme to AsyncStorage:", error);
+    }
+  };
+
+  const handleLogout = () => {
+    // console.log("Logging out, Access Token was:", accessToken);
+
+    if (!isRedirecting) {
+      setIsRedirecting(true);
+      logout();
+      router.replace("/");
     }
   };
 
@@ -104,6 +122,7 @@ const _layout = () => {
                 requestAnimationFrame(() => {
                   router.push("/(protected)");
                   setIsLeavesCollaps(true);
+                  setIsWFHCollaps(true);
                 });
               }}
             >
@@ -142,6 +161,7 @@ const _layout = () => {
                 requestAnimationFrame(() => {
                   router.push("/(protected)/attendance");
                   setIsLeavesCollaps(true);
+                  setIsWFHCollaps(true);
                 });
               }}
             >
@@ -170,6 +190,7 @@ const _layout = () => {
               onPress={() => {
                 requestAnimationFrame(() => {
                   setIsLeavesCollaps(!isLeavesCollaps);
+                  setIsWFHCollaps(true);
                 });
               }}
             >
@@ -287,6 +308,96 @@ const _layout = () => {
                 </Text>
               </TouchableOpacity>
             </Collapsible>
+
+            <TouchableOpacity
+              style={[styles.sectionHeader, { borderColor: colors.border }]}
+              onPress={() => {
+                requestAnimationFrame(() => {
+                  setIsWFHCollaps(!isWFHCollaps);
+                  setIsLeavesCollaps(true);
+                });
+              }}
+            >
+              <View style={styles.sectionHeaderContent}>
+                <Entypo
+                  name="add-to-list"
+                  size={24}
+                  color={isWFHCollaps ? colors.textTertiary : colors.primary}
+                />
+                <Text
+                  style={[styles.sectionTitle, { color: colors.textPrimary }]}
+                >
+                  Apply WFH
+                </Text>
+              </View>
+              <MaterialIcons
+                name={isWFHCollaps ? "expand-more" : "expand-less"}
+                size={24}
+                color={colors.textTertiary}
+              />
+            </TouchableOpacity>
+            <Collapsible collapsed={isWFHCollaps}>
+              <TouchableOpacity
+                style={[
+                  styles.subItem,
+                  path === "/applyWFH" && [
+                    styles.activeSubItem,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderLeftColor: colors.primary,
+                    },
+                  ],
+                ]}
+                onPress={() => {
+                  requestAnimationFrame(() => {
+                    router.push("/(protected)/applyWFH");
+                  });
+                }}
+              >
+                <Entypo
+                  name="add-to-list"
+                  size={22}
+                  color={
+                    path === "/applyWFH" ? colors.primary : colors.textTertiary
+                  }
+                />
+                <Text
+                  style={[styles.subItemText, { color: colors.textPrimary }]}
+                >
+                  Apply WFH
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.subItem,
+                  path === "/WorkFromHome" && [
+                    styles.activeSubItem,
+                    {
+                      backgroundColor: colors.surfaceVariant,
+                      borderLeftColor: colors.primary,
+                    },
+                  ],
+                ]}
+                onPress={() => {
+                  requestAnimationFrame(() => {
+                    router.push("/(protected)/WorkFromHome");
+                  });
+                }}
+              >
+                <MaterialIcons
+                  name="view-list"
+                  size={22}
+                  color={
+                    path === "/applyWFH" ? colors.primary : colors.textTertiary
+                  }
+                />
+                <Text
+                  style={[styles.subItemText, { color: colors.textPrimary }]}
+                >
+                  WFH Lists
+                </Text>
+              </TouchableOpacity>
+            </Collapsible>
           </View>
 
           {/* Theme Toggle Button */}
@@ -294,29 +405,64 @@ const _layout = () => {
             style={[styles.bottomSection, { borderTopColor: colors.border }]}
           >
             <TouchableOpacity
-              style={{ flexDirection: "row", alignItems: "center" }}
+              onPress={handleLogout}
+              style={{
+                // width: "100%",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                borderRadius: 12,
+                gap: 12,
+              }}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="logout" size={22} color="#EF4444" />
+              <Text
+                style={{
+                  color: "#EF4444",
+                  fontWeight: "600",
+                  fontSize: 16,
+                  marginLeft: 12,
+                  letterSpacing: 0.5,
+                }}
+              >
+                Sign Out
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                right: "10%",
+              }}
               onPress={toggleTheme}
             >
               <MaterialIcons
                 name={theme === "dark" ? "light-mode" : "nightlight"}
-                size={24}
+                size={30}
                 color={colors.textPrimary}
               />
-              <Text
+              {/* <Text
                 style={[
                   styles.drawerItemText,
                   { color: colors.textPrimary, marginLeft: 10 },
                 ]}
               >
                 {theme === "dark" ? "Light Theme" : "Dark Theme"}
-              </Text>
+              </Text> */}
             </TouchableOpacity>
           </View>
         </DrawerContentScrollView>
+
+        {/* <View style={styles.bottomSection}>
+          <View style={styles.divider} />
+        
+        </View> */}
       </View>
     );
   };
-
   return (
     <Drawer
       drawerContent={CustomDrawer}
@@ -329,25 +475,21 @@ const _layout = () => {
         drawerActiveTintColor: colors.primary,
         drawerInactiveTintColor: colors.textTertiary,
       }}
-      backBehavior="fullHistory"
+      backBehavior="history"
     >
       <Drawer.Screen
         name="index"
         options={{
           title: "Home",
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: {
-            borderRadius: 10,
-          },
-          drawerIcon: ({ focused }) => {
-            return (
-              <MaterialIcons
-                name="home"
-                size={24}
-                color={focused ? colors.primary : colors.textTertiary}
-              />
-            );
-          },
+          drawerItemStyle: { borderRadius: 10 },
+          drawerIcon: ({ focused }) => (
+            <MaterialIcons
+              name="home"
+              size={24}
+              color={focused ? colors.primary : colors.textTertiary}
+            />
+          ),
         }}
       />
       <Drawer.Screen
@@ -355,21 +497,15 @@ const _layout = () => {
         options={{
           title: "Attendance",
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: {
-            borderRadius: 10,
-          },
-          headerRight: (props) => {
-            return <></>;
-          },
-          drawerIcon: ({ focused }) => {
-            return (
-              <FontAwesome6
-                name="calendar-check"
-                size={24}
-                color={focused ? colors.primary : colors.textTertiary}
-              />
-            );
-          },
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
+          drawerIcon: ({ focused }) => (
+            <FontAwesome6
+              name="calendar-check"
+              size={24}
+              color={focused ? colors.primary : colors.textTertiary}
+            />
+          ),
         }}
       />
       <Drawer.Screen
@@ -377,12 +513,8 @@ const _layout = () => {
         options={{
           title: "Meeting Lists",
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: {
-            borderRadius: 10,
-          },
-          headerRight: (props) => {
-            return <></>;
-          },
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
         }}
       />
       <Drawer.Screen
@@ -390,12 +522,8 @@ const _layout = () => {
         options={{
           title: "Create Meeting",
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: {
-            borderRadius: 10,
-          },
-          headerRight: (props) => {
-            return <></>;
-          },
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
         }}
       />
       <Drawer.Screen
@@ -403,12 +531,8 @@ const _layout = () => {
         options={{
           title: "Lists of Holidays",
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: {
-            borderRadius: 10,
-          },
-          headerRight: (props) => {
-            return <></>;
-          },
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
         }}
       />
       <Drawer.Screen
@@ -416,12 +540,8 @@ const _layout = () => {
         options={{
           title: "Apply Leave",
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: {
-            borderRadius: 10,
-          },
-          headerRight: (props) => {
-            return <></>;
-          },
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
         }}
       />
       <Drawer.Screen
@@ -429,12 +549,26 @@ const _layout = () => {
         options={{
           title: "My Leave",
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: {
-            borderRadius: 10,
-          },
-          headerRight: (props) => {
-            return <></>;
-          },
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
+        }}
+      />
+      <Drawer.Screen
+        name="applyWFH"
+        options={{
+          title: "Apply WFH",
+          drawerActiveTintColor: colors.primary,
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
+        }}
+      />
+      <Drawer.Screen
+        name="WorkFromHome"
+        options={{
+          title: "Work From Home",
+          drawerActiveTintColor: colors.primary,
+          drawerItemStyle: { borderRadius: 10 },
+          headerRight: () => <></>,
         }}
       />
     </Drawer>
@@ -517,7 +651,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderTopWidth: 1,
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    // alignItems: "center",
+    justifyContent: "space-between",
   },
 });

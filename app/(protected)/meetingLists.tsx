@@ -20,6 +20,8 @@ import { RefreshControl } from "react-native-gesture-handler";
 import { FAB } from "react-native-paper";
 import { DatePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
+import useAuthStore from "@/store/AuthStore";
+import { BASE_URL } from "@/constants/Config";
 
 const { width } = Dimensions.get("window");
 
@@ -106,17 +108,20 @@ const MeetingList = () => {
   );
   const router = useRouter();
 
+     const accessToken = useAuthStore((state) => state.accessToken);
+
+
   const fetchMeeting = async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat/HR/Portal/meeting",
+
+        BASE_URL + `/meeting`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            accesstoken:
-              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+            accesstoken: accessToken || "",
           },
         }
       );

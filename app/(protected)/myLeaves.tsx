@@ -17,6 +17,8 @@ import { Dropdown } from "react-native-element-dropdown";
 import { LegendList } from "@legendapp/list";
 import { Colors } from "../../constants/Colors";
 import { RefreshControl } from "react-native";
+import { BASE_URL } from "@/constants/Config";
+import useAuthStore from "@/store/AuthStore";
 
 const { width } = Dimensions.get("window");
 
@@ -113,6 +115,9 @@ const myLeaves = () => {
 
   const router = useRouter();
 
+
+      const accessToken = useAuthStore((state) => state.accessToken);
+
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", () => {
       setColumnWidths(getColumnWidths());
@@ -133,13 +138,12 @@ const myLeaves = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat/HR/Portal/leaves",
+        BASE_URL + `/leaves`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            accesstoken:
-              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+            accesstoken: accessToken || " ",
           },
         }
       );

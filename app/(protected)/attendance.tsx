@@ -17,6 +17,8 @@ import { Dropdown } from "react-native-element-dropdown";
 import { RefreshControl } from "react-native-gesture-handler";
 import { DatePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
+import useAuthStore from "@/store/AuthStore";
+import { BASE_URL } from "@/constants/Config";
 
 const { width } = Dimensions.get("window");
 
@@ -103,6 +105,12 @@ const Attendance = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [data, setData] = useState<AttendanceType[]>([]);
+  console.log(data);
+
+   const accessToken = useAuthStore((state) => state.accessToken);
+
+ 
+  
   const [loading, setLoading] = useState(true);
   const [columnWidths, setColumnWidths] = useState(getColumnWidths());
 
@@ -121,13 +129,14 @@ const Attendance = () => {
       }
 
       const response = await fetch(
-        `https://hr.actifyzone.com/HR-API/HR/Portal/attendance?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
+
+        BASE_URL + `/attendance?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
+        // `https://hr.actifyzone.com/HR-API/HR/Portal/attendance?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            accesstoken:
-              "pIWUUX5ekHJWJRoPtsRrpFmRakvmL5RVGP1TIF64T9nvlLYyYLJJPlTLFwsk",
+            accesstoken: accessToken || "",
           },
         }
       );

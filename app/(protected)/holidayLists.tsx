@@ -17,6 +17,8 @@ import { Dropdown } from "react-native-element-dropdown";
 import { RefreshControl } from "react-native-gesture-handler";
 import { DatePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
+import { BASE_URL } from "@/constants/Config";
+import useAuthStore from "@/store/AuthStore";
 
 const { width } = Dimensions.get("window");
 
@@ -81,22 +83,23 @@ const holidayLists = () => {
   // console.log(holidays);
 
   const [loading, setLoading] = useState(true);
-  const [columnWidths, setColumnWidths] = useState(getColumnWidths());
+     const accessToken = useAuthStore((state) => state.accessToken);
+     const [columnWidths, setColumnWidths] = useState(getColumnWidths());
 
-
+  
   const router = useRouter();
 
   const fetchHolidays = async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat/HR/Portal/holidays",
+
+        BASE_URL + `/holidays`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            accesstoken:
-              "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+            accesstoken: accessToken || "",
           },
         }
       );

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import { AutocompleteDropdown } from "react-native-autocomplete-dropdown";
 import { Colors } from "@/constants/Colors";
 import { useFocusEffect } from "expo-router";
 import { Badge } from "react-native-paper";
+import useAuthStore from "@/store/AuthStore";
+import { BASE_URL } from "@/constants/Config";
 
 const { height, width } = Dimensions.get("window");
 
@@ -49,12 +51,21 @@ interface SelectType {
   title: string;
 }
 
+interface PendingLeaveCount {
+  employee_id: number;
+  leave_category_id: number;
+  leave_category_name: string;
+  l_count: number;
+}
+
+interface LeaveType {
+  pending_leave_count: PendingLeaveCount[];
+}
+
 export default function ApplyLeaveScreen() {
   const dimensions = getResponsiveDimensions();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-
-  const searchRef = useRef<any>(null);
 
   const {
     control,
@@ -80,6 +91,9 @@ export default function ApplyLeaveScreen() {
   const [formKey, setFormKey] = useState(0);
   const leaveCategoryDropdownController = useRef<any>(null);
   const leaveTypeDropdownController = useRef<any>(null);
+  const [leaves, setLeaves] = useState<LeaveType[]>([]);
+
+  
 
   // Define leave category and type options
   const leaveCategories: SelectType[] = [
@@ -101,6 +115,39 @@ export default function ApplyLeaveScreen() {
   const [selectedLeaveType, setSelectedLeaveType] = useState<SelectType | null>(
     null
   );
+
+    const accessToken = useAuthStore((state) => state.accessToken);
+
+
+  const fetchLeaves = async () => {
+    try {
+      const response = await fetch(
+         BASE_URL + `/leaves`,
+        // `https://hr1.actifyzone.com/hr-uat/HR/Portal/leaves`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+             accesstoken: accessToken || "",
+          },
+        }
+      );
+      const data = await response.json();
+      setLeaves(Array.isArray(data) ? data : []);
+      if (response.ok) {
+        console.log("Leaves fetched successfully:", data);
+      } else {
+        throw new Error(data.message || "Failed to fetch leaves");
+      }
+    } catch (error) {
+      console.error("Error fetching leaves:", error);
+      ToastAndroid.show("Failed to fetch leaves", ToastAndroid.SHORT);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
 
   const formatDate = useCallback((date: Date | null) => {
     if (!date) return "dd-mm-yyyy";
@@ -173,10 +220,7 @@ export default function ApplyLeaveScreen() {
           reason: data.reason,
         };
 
-        handleApplyLeave(submittedData);
-        // console.log("Leave form submitted:", submittedData);
-
-        // Reset form and states
+        await handleApplyLeave(submittedData);
         reset({
           leaveCategory: "",
           leaveType: "",
@@ -197,9 +241,9 @@ export default function ApplyLeaveScreen() {
           leaveTypeDropdownController.current.clear();
         }
         setFormKey((prev) => prev + 1);
-        await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         console.error("Error submitting form:", error);
+        ToastAndroid.show("Failed to submit leave", ToastAndroid.SHORT);
       }
     },
     [reset]
@@ -208,24 +252,26 @@ export default function ApplyLeaveScreen() {
   const handleApplyLeave = async (data: any) => {
     try {
       const res = await fetch(
-        `https://hr1.actifyzone.com/hr-uat/HR/Portal/leaves`,
+
+          BASE_URL + `/leaves`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            accesstoken: "6RHWyQsb29yR6x5J9hvutLDQ4W3T8lQFgb2UppGNT4lTKk0nISppQkSG4JfI",
+            accesstoken: accessToken || "",
           },
           body: JSON.stringify(data),
         }
       );
       const result = await res.json();
-      
+
       if (res.ok) {
         ToastAndroid.show("Leave applied successfully", ToastAndroid.SHORT);
       } else {
-        throw new Error(result.message || "Failed to Leave applied");
+        throw new Error(result.message || "Failed to apply leave");
       }
     } catch (error) {
+      console.error("Error applying leave:", error);
       ToastAndroid.show("Leave application failed", ToastAndroid.SHORT);
     }
   };
@@ -253,7 +299,7 @@ export default function ApplyLeaveScreen() {
         leaveTypeDropdownController.current.clear();
       }
       setFormKey((prev) => prev + 1);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await fetchLeaves();
     } catch (error) {
       console.error("Error refreshing form:", error);
     } finally {
@@ -279,6 +325,16 @@ export default function ApplyLeaveScreen() {
       setFormKey((prev) => prev + 1);
     }, [reset])
   );
+
+  // Find the pending leave count for General Leave
+  const generalLeaveCount =
+    leaves
+      .flatMap((leave) => leave.pending_leave_count || [])
+      .find(
+        (item) =>
+          item.leave_category_name === "General Leave" ||
+          item.leave_category_id === 2
+      )?.l_count || 0;
 
   const styles = StyleSheet.create({
     container: {
@@ -415,6 +471,11 @@ export default function ApplyLeaveScreen() {
       fontSize: dimensions.fontSize.body,
       color: colors.text,
     },
+    badgeContainer: {
+      height: 40,
+      justifyContent: "center",
+      width: 40,
+    },
   });
 
   return (
@@ -436,6 +497,7 @@ export default function ApplyLeaveScreen() {
     >
       <View
         style={{
+          flexDirection: "row",
           padding: dimensions.padding,
           marginBottom: 10,
           backgroundColor: colors.surface,
@@ -445,21 +507,26 @@ export default function ApplyLeaveScreen() {
           shadowOpacity: 0.1,
           shadowRadius: 6,
           elevation: 4,
-          justifyContent: "center",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
         <Text
           style={{
             fontSize: dimensions.fontSize.title,
             fontWeight: "700",
-
             color: colors.text,
           }}
         >
           General Leave
         </Text>
-
-        <Badge>5</Badge>
+        <View style={{ flexDirection: "row" }}>
+          <View style={styles.badgeContainer}>
+            <Badge size={30} style={{ backgroundColor: colors.primary }}>
+              {generalLeaveCount}
+            </Badge>
+          </View>
+        </View>
       </View>
 
       <View style={styles.formWrapper}>
