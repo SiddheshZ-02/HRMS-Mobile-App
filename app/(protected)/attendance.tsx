@@ -181,9 +181,9 @@ const Attendance = () => {
       const lowerSearch = searchText.toLowerCase();
       result = result.filter((item) =>
         [
-          item.firstname?.toLowerCase(),
-          item.lastname?.toLowerCase(),
-          item.email?.toLowerCase(),
+          // item.firstname?.toLowerCase(),
+          // item.lastname?.toLowerCase(),
+          item.currentdate?.toLowerCase(),
           item.work_mode?.toLowerCase(),
         ]
           .filter((value) => typeof value === "string")
@@ -218,18 +218,18 @@ const Attendance = () => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
 
-      if (
-        sortColumn === "firstname" ||
-        sortColumn === "lastname" ||
-        sortColumn === "email" ||
-        sortColumn === "work_mode"
-      ) {
-        valueA = a[sortColumn] || "";
-        valueB = b[sortColumn] || "";
-        return sortOrder === "asc"
-          ? String(valueA).localeCompare(String(valueB))
-          : String(valueB).localeCompare(String(valueA));
-      }
+      // if (
+      //   sortColumn === "currentdate" 
+      //   // sortColumn === "lastname" ||
+      //   // sortColumn === "email" ||
+      //   // sortColumn === "work_mode"
+      // ) {
+      //   valueA = a[sortColumn] || "";
+      //   valueB = b[sortColumn] || "";
+      //   return sortOrder === "asc"
+      //     ? String(valueA).localeCompare(String(valueB))
+      //     : String(valueB).localeCompare(String(valueA));
+      // }
 
       if (sortColumn === "currentdate") {
         const dateA = parseDateString(a.currentdate);
@@ -454,7 +454,7 @@ const Attendance = () => {
           />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder="Search by name, email, or work mode..."
+            placeholder="Search by Date or work mode..."
             value={searchText}
             onChangeText={(text) => {
               setSearchText(text);

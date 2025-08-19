@@ -167,11 +167,16 @@ const holidayLists = () => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
 
-      // Handle days column
-      if (sortColumn === "days") {
-        valueA = a.days || "";
-        valueB = b.days || "";
-      }
+      // Handle dates column
+    if (sortColumn === "dates") {
+      // Convert to Date objects safely
+      const dateA = valueA ? new Date(valueA) : new Date(0); 
+      const dateB = valueB ? new Date(valueB) : new Date(0);
+
+      return sortOrder === "asc"
+        ? dateA.getTime() - dateB.getTime()
+        : dateB.getTime() - dateA.getTime();
+    }
 
       if (typeof valueA === "string" && typeof valueB === "string") {
         return sortOrder === "asc"
@@ -191,18 +196,18 @@ const holidayLists = () => {
     return sortedHolidays.slice(from, from + itemsPerPage);
   }, [sortedHolidays, page, itemsPerPage]);
 
-  // const handleSort = useCallback(
-  //   (column: keyof holidayType) => {
-  //     if (sortColumn === column) {
-  //       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-  //     } else {
-  //       setSortColumn(column);
-  //       setSortOrder("asc");
-  //     }
-  //     setPage(0);
-  //   },
-  //   [sortColumn, sortOrder]
-  // );
+  const handleSort = useCallback(
+    (column: keyof holidayType) => {
+      if (sortColumn === column) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortColumn(column);
+        setSortOrder("asc");
+      }
+      setPage(0);
+    },
+    [sortColumn, sortOrder]
+  );
 
   const handleCloseModal = useCallback(() => {
     setDateModalVisible(false);

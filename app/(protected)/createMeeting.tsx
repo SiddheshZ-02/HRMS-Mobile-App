@@ -17,6 +17,8 @@ import {
 import { AutocompleteDropdown } from "react-native-autocomplete-dropdown";
 import { DatePickerModal, TimePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
+import { BASE_URL } from "@/constants/Config";
+import useAuthStore from "@/store/AuthStore";
 // import ScreenWrapper from "@/components/ScreenWrapper";
 
 const { height, width } = Dimensions.get("window");
@@ -70,6 +72,8 @@ const createMeeting = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const clientDropdownController = useRef<any>(null);
   const employeeDropdownController = useRef<any>(null);
+
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   const {
     control,
@@ -178,13 +182,12 @@ const createMeeting = () => {
     setEmployeeLoading(true);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat/HR/Portal/employee/list",
+        BASE_URL + "/employee/list",
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            accessToken:
-              "kN5YOi3SjeXjUNNjw7u82IieGZ7ZbVBogEiykwikdE2b5OOSAOKWQUdrgKDt",
+            accessToken: accessToken || "",
           },
         }
       );
@@ -210,13 +213,14 @@ const createMeeting = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        "https://hr1.actifyzone.com/hr-uat//HR/Portal/client_name",
-        {
+        BASE_URL + ` /client_name `,
+
+        // "https://hr1.actifyzone.com/hr-uat//HR/Portal/client_name",
+        { 
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            accessToken:
-              "kN5YOi3SjeXjUNNjw7u82IieGZ7ZbVBogEiykwikdE2b5OOSAOKWQUdrgKDt",
+            accessToken: accessToken || "",
           },
         }
       );

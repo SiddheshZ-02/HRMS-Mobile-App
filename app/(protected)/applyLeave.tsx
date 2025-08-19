@@ -11,16 +11,18 @@ import {
   Dimensions,
   RefreshControl,
   ToastAndroid,
+  Alert,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { DatePickerModal } from "react-native-paper-dates";
 import { FontAwesome } from "@expo/vector-icons";
-import { AutocompleteDropdown } from "react-native-autocomplete-dropdown";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { Colors } from "@/constants/Colors";
 import { useFocusEffect } from "expo-router";
 import { Badge } from "react-native-paper";
 import useAuthStore from "@/store/AuthStore";
 import { BASE_URL } from "@/constants/Config";
+import SelectDropdown from "react-native-select-dropdown";
 
 const { height, width } = Dimensions.get("window");
 
@@ -29,7 +31,7 @@ const isTablet = width > 768;
 
 // Responsive dimensions
 const getResponsiveDimensions = () => ({
-  padding: isTablet ? 24 : 16,
+  padding: isTablet ? 24 : 18,
   fontSize: {
     title: isTablet ? 24 : 20,
     body: isTablet ? 18 : 16,
@@ -49,17 +51,15 @@ interface LeaveFormType {
 interface SelectType {
   id: string;
   title: string;
-}
-
-interface PendingLeaveCount {
-  employee_id: number;
-  leave_category_id: number;
-  leave_category_name: string;
-  l_count: number;
+  icon: string;
 }
 
 interface LeaveType {
-  pending_leave_count: PendingLeaveCount[];
+  employee_id: number;
+  leave_category_id: number;
+  leave_category_name: string;
+  leave_count: number;
+  total_leave_count: number;
 }
 
 export default function ApplyLeaveScreen() {
@@ -89,21 +89,19 @@ export default function ApplyLeaveScreen() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [formKey, setFormKey] = useState(0);
-  const leaveCategoryDropdownController = useRef<any>(null);
-  const leaveTypeDropdownController = useRef<any>(null);
+  const leaveCategoryDropdownRef = useRef<any>(null);
+  const leaveTypeDropdownRef = useRef<any>(null);
   const [leaves, setLeaves] = useState<LeaveType[]>([]);
 
-  
-
-  // Define leave category and type options
+  // Define leave category and type options with icons
   const leaveCategories: SelectType[] = [
-    { id: "1", title: "Unpaid Leave" },
-    { id: "2", title: "General Leave" },
+    { id: "1", title: "Unpaid Leave", icon: "calendar-remove" },
+    { id: "2", title: "General Leave", icon: "calendar-check" },
   ];
 
   const leaveTypes: SelectType[] = [
-    { id: "1", title: "Half Day" },
-    { id: "2", title: "Full Day" },
+    { id: "1", title: "Half Day", icon: "clock-time-four-outline" },
+    { id: "2", title: "Full Day", icon: "clock-time-eight-outline" },
   ];
 
   const [leaveCategorySuggestions, setLeaveCategorySuggestions] =
@@ -116,46 +114,53 @@ export default function ApplyLeaveScreen() {
     null
   );
 
-    const accessToken = useAuthStore((state) => state.accessToken);
+  const accessToken = useAuthStore((state) => state.accessToken);
 
+  const showToast = (message: string) => {
+    if (Platform.OS === "android") {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      Alert.alert("Notification", message);
+    }
+  };
 
   const fetchLeaves = async () => {
     try {
-      const response = await fetch(
-         BASE_URL + `/leaves`,
-        // `https://hr1.actifyzone.com/hr-uat/HR/Portal/leaves`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-             accesstoken: accessToken || "",
-          },
-        }
-      );
+      const response = await fetch(`${BASE_URL}/show/leave`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || "",
+        },
+      });
       const data = await response.json();
       setLeaves(Array.isArray(data) ? data : []);
-      if (response.ok) {
-        console.log("Leaves fetched successfully:", data);
-      } else {
+      if (!response.ok) {
         throw new Error(data.message || "Failed to fetch leaves");
       }
     } catch (error) {
       console.error("Error fetching leaves:", error);
-      ToastAndroid.show("Failed to fetch leaves", ToastAndroid.SHORT);
+      showToast("Failed to fetch leaves");
     }
   };
 
   useEffect(() => {
-    fetchLeaves();
-  }, []);
+    if (accessToken) {
+      fetchLeaves();
+    }
+  }, [accessToken]);
 
   const formatDate = useCallback((date: Date | null) => {
     if (!date) return "dd-mm-yyyy";
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    try {
+      return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "dd-mm-yyyy";
+    }
   }, []);
 
   const onStartDateConfirm = useCallback(
@@ -177,37 +182,47 @@ export default function ApplyLeaveScreen() {
   );
 
   const filterLeaveCategorySuggestions = useCallback((query: string) => {
+    console.log("Filtering leave categories with query:", query);
     if (!query || query.length < 1) {
       setLeaveCategorySuggestions(leaveCategories);
+      console.log("Reset leave category suggestions:", leaveCategories);
       return;
     }
     const filtered = leaveCategories.filter((category) =>
       category.title.toLowerCase().includes(query.toLowerCase())
     );
     setLeaveCategorySuggestions(filtered);
+    console.log("Filtered leave category suggestions:", filtered);
   }, []);
 
   const filterLeaveTypeSuggestions = useCallback((query: string) => {
+    console.log("Filtering leave types with query:", query);
     if (!query || query.length < 1) {
       setLeaveTypeSuggestions(leaveTypes);
+      console.log("Reset leave type suggestions:", leaveTypes);
       return;
     }
     const filtered = leaveTypes.filter((type) =>
       type.title.toLowerCase().includes(query.toLowerCase())
     );
     setLeaveTypeSuggestions(filtered);
+    console.log("Filtered leave type suggestions:", filtered);
   }, []);
 
   const onSubmit = useCallback(
     async (data: LeaveFormType) => {
       try {
-        const formattedDateToDDMMYYYY = (date: string | Date | null) => {
+        const formattedDateToDDMMYYYY = (date: Date | null) => {
           if (!date) return "";
-          const d = new Date(date);
-          const day = String(d.getDate()).padStart(2, "0");
-          const month = String(d.getMonth() + 1).padStart(2, "0");
-          const year = String(d.getFullYear());
-          return `${day}/${month}/${year}`;
+          try {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, "0");
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const year = String(d.getFullYear());
+            return `${day}/${month}/${year}`;
+          } catch {
+            return "";
+          }
         };
 
         const leaveCategory =
@@ -234,45 +249,42 @@ export default function ApplyLeaveScreen() {
         setSelectedLeaveType(null);
         setLeaveCategorySuggestions(leaveCategories);
         setLeaveTypeSuggestions(leaveTypes);
-        if (leaveCategoryDropdownController.current) {
-          leaveCategoryDropdownController.current.clear();
+        if (leaveCategoryDropdownRef.current?.reset) {
+          leaveCategoryDropdownRef.current.reset();
         }
-        if (leaveTypeDropdownController.current) {
-          leaveTypeDropdownController.current.clear();
+        if (leaveTypeDropdownRef.current?.reset) {
+          leaveTypeDropdownRef.current.reset();
         }
         setFormKey((prev) => prev + 1);
+        showToast("Leave applied successfully");
       } catch (error) {
         console.error("Error submitting form:", error);
-        ToastAndroid.show("Failed to submit leave", ToastAndroid.SHORT);
+        showToast("Failed to submit leave");
       }
     },
     [reset]
   );
 
   const handleApplyLeave = async (data: any) => {
-    try {
-      const res = await fetch(
+ 
 
-          BASE_URL + `/leaves`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            accesstoken: accessToken || "",
-          },
-          body: JSON.stringify(data),
-        }
-      );
+    try {
+      const res = await fetch(`${BASE_URL}/leaves`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || "",
+        },
+        body: JSON.stringify(data),
+      });
       const result = await res.json();
 
-      if (res.ok) {
-        ToastAndroid.show("Leave applied successfully", ToastAndroid.SHORT);
-      } else {
+      if (!res.ok) {
         throw new Error(result.message || "Failed to apply leave");
       }
     } catch (error) {
       console.error("Error applying leave:", error);
-      ToastAndroid.show("Leave application failed", ToastAndroid.SHORT);
+      throw error;
     }
   };
 
@@ -292,16 +304,17 @@ export default function ApplyLeaveScreen() {
       setSelectedLeaveType(null);
       setLeaveCategorySuggestions(leaveCategories);
       setLeaveTypeSuggestions(leaveTypes);
-      if (leaveCategoryDropdownController.current) {
-        leaveCategoryDropdownController.current.clear();
+      if (leaveCategoryDropdownRef.current?.reset) {
+        leaveCategoryDropdownRef.current.reset();
       }
-      if (leaveTypeDropdownController.current) {
-        leaveTypeDropdownController.current.clear();
+      if (leaveTypeDropdownRef.current?.reset) {
+        leaveTypeDropdownRef.current.reset();
       }
       setFormKey((prev) => prev + 1);
       await fetchLeaves();
     } catch (error) {
       console.error("Error refreshing form:", error);
+      showToast("Error refreshing form");
     } finally {
       setRefreshing(false);
     }
@@ -322,19 +335,24 @@ export default function ApplyLeaveScreen() {
       setSelectedLeaveType(null);
       setLeaveCategorySuggestions(leaveCategories);
       setLeaveTypeSuggestions(leaveTypes);
+      if (leaveCategoryDropdownRef.current?.reset) {
+        leaveCategoryDropdownRef.current.reset();
+      }
+      if (leaveTypeDropdownRef.current?.reset) {
+        leaveTypeDropdownRef.current.reset();
+      }
       setFormKey((prev) => prev + 1);
     }, [reset])
   );
 
   // Find the pending leave count for General Leave
-  const generalLeaveCount =
-    leaves
-      .flatMap((leave) => leave.pending_leave_count || [])
-      .find(
-        (item) =>
-          item.leave_category_name === "General Leave" ||
-          item.leave_category_id === 2
-      )?.l_count || 0;
+  const generalLeaveCount = leaves
+    .filter(
+      (leave) =>
+        leave.leave_category_name === "General Leave" ||
+        leave.leave_category_id === 2
+    )
+    .reduce((total, leave) => total + (leave.leave_count || 0), 0);
 
   const styles = StyleSheet.create({
     container: {
@@ -350,6 +368,7 @@ export default function ApplyLeaveScreen() {
       shadowOpacity: 0.1,
       shadowRadius: 6,
       elevation: 4,
+      zIndex: 1000,
     },
     title: {
       fontSize: dimensions.fontSize.title,
@@ -362,13 +381,7 @@ export default function ApplyLeaveScreen() {
       marginBottom: 6,
       fontWeight: "500",
       color: colors.text,
-    },
-    pickerContainer: {
-      borderWidth: 1,
-      borderRadius: 8,
-      marginBottom: dimensions.padding,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      marginTop:20
     },
     input: {
       borderWidth: 1,
@@ -383,7 +396,7 @@ export default function ApplyLeaveScreen() {
     dateTimeContainer: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: dimensions.padding,
+      // marginBottom: dimensions.padding,
     },
     dateTimeInput: {
       flex: 1,
@@ -427,49 +440,77 @@ export default function ApplyLeaveScreen() {
       fontSize: dimensions.fontSize.small,
       marginBottom: dimensions.padding,
     },
-    picker: {
-      backgroundColor: colors.surface,
-      color: colors.text,
-    },
     dropdownContainer: {
       flexGrow: 1,
       flexShrink: 1,
       marginBottom: dimensions.padding,
+      zIndex: 2000,
     },
-    dropdownInputContainer: {
+    dropdownButtonStyle: {
+      width: "100%",
+      height: dimensions.inputHeight,
+      backgroundColor: colors.surface,
+      borderRadius: 8,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 8,
-      backgroundColor: colors.surface,
-      marginBottom: 14,
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 12,
     },
-    dropdownInput: {
+    dropdownButtonTxtStyle: {
+      flex: 1,
       fontSize: dimensions.fontSize.body,
+      fontWeight: "500",
       color: colors.text,
     },
-    dropdownRightButtonsContainer: {
-      right: 8,
-      height: 30,
-      top: 0,
-      alignSelf: "center",
+    dropdownButtonArrowStyle: {
+      fontSize: dimensions.fontSize.body + 4,
+      color: colors.text,
     },
-    dropdownSuggestionsContainer: {
+    dropdownButtonIconStyle: {
+      fontSize: dimensions.fontSize.body + 4,
+      marginRight: 8,
+      color: colors.text,
+    },
+    dropdownMenuStyle: {
       backgroundColor: colors.surface,
+      borderRadius: 8,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 8,
-      marginTop: 4,
-      zIndex: 1000,
+      zIndex: 3000,
       elevation: 10,
+      marginTop: 2,
+      maxHeight: height * 0.3,
+      width: "80%",
     },
-    dropdownItemContainer: {
-      padding: 15,
+    dropdownItemStyle: {
+      width: "100%",
+      flexDirection: "row",
+      paddingHorizontal: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 8,
+     
+    },
+    dropdownItemTxtStyle: {
+      flex: 1,
+      fontSize: dimensions.fontSize.body,
+      fontWeight: "500",
+      color: colors.text,
+    },
+    dropdownItemIconStyle: {
+      fontSize: dimensions.fontSize.body + 4,
+      marginRight: 8,
+      color: colors.text,
+    },
+    dropdownSearchInputStyle: {
+      fontSize: dimensions.fontSize.body,
+      color: colors.text,
+      padding: 12,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
-    },
-    dropdownItemText: {
-      fontSize: dimensions.fontSize.body,
-      color: colors.text,
+      backgroundColor: colors.surface,
     },
     badgeContainer: {
       height: 40,
@@ -509,6 +550,7 @@ export default function ApplyLeaveScreen() {
           elevation: 4,
           justifyContent: "space-between",
           alignItems: "center",
+          zIndex: 100,
         }}
       >
         <Text
@@ -533,134 +575,132 @@ export default function ApplyLeaveScreen() {
         <Text style={styles.title}>Apply Leave</Text>
 
         {/* Leave Category */}
-        <Text style={styles.label}>Leave Category *</Text>
-        <Controller
-          control={control}
-          name="leaveCategory"
-          rules={{ required: "Leave category is required" }}
-          render={({ field: { onChange, value } }) => (
-            <AutocompleteDropdown
-              controller={(controller) => {
-                leaveCategoryDropdownController.current = controller;
-              }}
-              dataSet={leaveCategorySuggestions}
-              onChangeText={filterLeaveCategorySuggestions}
-              editable={false}
-              onSelectItem={(item) => {
-                if (item && item.title) {
-                  setSelectedLeaveCategory({ id: item.id, title: item.title });
-                  onChange(item.title.toLowerCase());
-                } else {
-                  setSelectedLeaveCategory(null);
-                  onChange("");
-                }
-              }}
-              debounce={300}
-              suggestionsListMaxHeight={Dimensions.get("window").height * 0.4}
-              textInputProps={{
-                placeholder: "Select leave category",
-                placeholderTextColor: colors.textTertiary,
-                autoCorrect: false,
-                autoCapitalize: "none",
-                style: styles.dropdownInput,
-                onFocus: () => {
-                  setLeaveCategorySuggestions(leaveCategories);
-                  try {
-                    leaveCategoryDropdownController.current?.open?.();
-                  } catch {}
-                },
-              }}
-              rightButtonsContainerStyle={styles.dropdownRightButtonsContainer}
-              inputContainerStyle={styles.dropdownInputContainer}
-              suggestionsListContainerStyle={
-                styles.dropdownSuggestionsContainer
-              }
-              containerStyle={styles.dropdownContainer}
-              direction="down"
-              renderItem={(item) => (
-                <View style={styles.dropdownItemContainer}>
-                  <Text style={styles.dropdownItemText}>{item.title}</Text>
-                </View>
-              )}
-              inputHeight={dimensions.inputHeight}
-              showChevron={true}
-              closeOnBlur={true}
-              clearOnFocus={false}
-              initialValue={
-                selectedLeaveCategory
-                  ? { id: selectedLeaveCategory.id }
-                  : undefined
-              }
-            />
+        <View style={[styles.dropdownContainer, { zIndex: 3000 }]}>
+          <Text style={styles.label}>Leave Category *</Text>
+          <Controller
+            control={control}
+            name="leaveCategory"
+            rules={{ required: "Leave category is required" }}
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                ref={leaveCategoryDropdownRef}
+                data={leaveCategorySuggestions}
+                onSelect={(selectedItem) => {
+                  // console.log("Selected leave category:", selectedItem);
+                  if (selectedItem) {
+                    setSelectedLeaveCategory(selectedItem);
+                    onChange(selectedItem.title.toLowerCase());
+                  } else {
+                    setSelectedLeaveCategory(null);
+                    onChange("");
+                  }
+                }}
+                renderButton={(selectedItem, isOpen) => (
+                  <View style={styles.dropdownButtonStyle}>
+                    {selectedItem && (
+                      <Icon
+                        name={selectedItem.icon}
+                        style={styles.dropdownButtonIconStyle}
+                      />
+                    )
+                    }
+                    <Text style={styles.dropdownButtonTxtStyle}>
+                      {selectedItem?.title || "Select leave category"}
+                    </Text>
+                    <Icon
+                      name={isOpen ? "chevron-up" : "chevron-down"}
+                      style={styles.dropdownButtonArrowStyle}
+                    />
+                  </View>
+                )}
+                renderItem={(item, index, isSelected) => (
+                  <View
+                    style={{
+                      ...styles.dropdownItemStyle,
+                      ...(isSelected && { backgroundColor: colors.border }),
+                    }}
+                  >
+                   
+                    <Text style={styles.dropdownItemTxtStyle}>
+                      {item.title}
+                    </Text>
+                  </View>
+                )}
+                showsVerticalScrollIndicator={false}
+                dropdownStyle={styles.dropdownMenuStyle}
+             
+              />
+            )}
+          />
+          {errors.leaveCategory && (
+            <Text style={styles.errorText}>{errors.leaveCategory.message}</Text>
           )}
-        />
-        {errors.leaveCategory && (
-          <Text style={styles.errorText}>{errors.leaveCategory.message}</Text>
-        )}
+        </View>
 
         {/* Leave Type */}
-        <Text style={styles.label}>Leave Type *</Text>
-        <Controller
-          control={control}
-          name="leaveType"
-          rules={{ required: "Leave type is required" }}
-          render={({ field: { onChange, value } }) => (
-            <AutocompleteDropdown
-              controller={(controller) => {
-                leaveTypeDropdownController.current = controller;
-              }}
-              dataSet={leaveTypeSuggestions}
-              onChangeText={filterLeaveTypeSuggestions}
-              editable={false}
-              onSelectItem={(item) => {
-                if (item && item.title) {
-                  setSelectedLeaveType({ id: item.id, title: item.title });
-                  onChange(item.title.toLowerCase());
-                } else {
-                  setSelectedLeaveType(null);
-                  onChange("");
-                }
-              }}
-              debounce={300}
-              suggestionsListMaxHeight={Dimensions.get("window").height * 0.4}
-              textInputProps={{
-                placeholder: "Select leave type",
-                placeholderTextColor: colors.textTertiary,
-                autoCorrect: false,
-                autoCapitalize: "none",
-                style: styles.dropdownInput,
-                onFocus: () => {
-                  setLeaveTypeSuggestions(leaveTypes);
-                  try {
-                    leaveTypeDropdownController.current?.open?.();
-                  } catch {}
-                },
-              }}
-              rightButtonsContainerStyle={styles.dropdownRightButtonsContainer}
-              inputContainerStyle={styles.dropdownInputContainer}
-              suggestionsListContainerStyle={
-                styles.dropdownSuggestionsContainer
-              }
-              containerStyle={styles.dropdownContainer}
-              direction="down"
-              renderItem={(item) => (
-                <View style={styles.dropdownItemContainer}>
-                  <Text style={styles.dropdownItemText}>{item.title}</Text>
-                </View>
-              )}
-              inputHeight={dimensions.inputHeight}
-              showChevron={true}
-              closeOnBlur={true}
-              clearOnFocus={false}
-              initialValue={
-                selectedLeaveType ? { id: selectedLeaveType.id } : undefined
-              }
-            />
+        <View style={[styles.dropdownContainer, { zIndex: 2000 }]}>
+          <Text style={styles.label}>Leave Type *</Text>
+          <Controller
+            control={control}
+            name="leaveType"
+            rules={{ required: "Leave type is required" }}
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                ref={leaveTypeDropdownRef}
+                data={leaveTypeSuggestions}
+                onSelect={(selectedItem) => {
+                  // console.log("Selected leave type:", selectedItem);
+                  if (selectedItem) {
+                    setSelectedLeaveType(selectedItem);
+                    onChange(selectedItem.title.toLowerCase());
+                  } else {
+                    setSelectedLeaveType(null);
+                    onChange("");
+                  }
+                }}
+                renderButton={(selectedItem, isOpen) => (
+                  <View style={styles.dropdownButtonStyle}>
+                    {selectedItem && (
+                      <Icon
+                        name={selectedItem.icon}
+                        style={styles.dropdownButtonIconStyle}
+                      />
+                    )}
+                    <Text style={styles.dropdownButtonTxtStyle}>
+                      {selectedItem?.title || "Select leave type"}
+                    </Text>
+                    <Icon
+                      name={isOpen ? "chevron-up" : "chevron-down"}
+                      style={styles.dropdownButtonArrowStyle}
+                    />
+                  </View>
+                )}
+                renderItem={(item, index, isSelected) => (
+                  <View
+                    style={{
+                      ...styles.dropdownItemStyle,
+                      ...(isSelected && { backgroundColor: colors.border }),
+                    }}
+                  >
+                    {/* <Icon
+                      name={item.icon}
+                      style={styles.dropdownItemIconStyle}
+                    /> */}
+                    <Text style={styles.dropdownItemTxtStyle}>
+                      {item.title}
+                    </Text>
+                  </View>
+                )}
+                showsVerticalScrollIndicator={false}
+                dropdownStyle={styles.dropdownMenuStyle}
+          //  
+              />
+            )}
+          />
+          {errors.leaveType && (
+            <Text style={styles.errorText}>{errors.leaveType.message}</Text>
           )}
-        />
-        {errors.leaveType && (
-          <Text style={styles.errorText}>{errors.leaveType.message}</Text>
-        )}
+        </View>
 
         {/* Start Date */}
         <Text style={styles.label}>Start Date *</Text>
@@ -734,10 +774,7 @@ export default function ApplyLeaveScreen() {
             <TextInput
               style={[
                 styles.input,
-                {
-                  minHeight: 80,
-                  textAlignVertical: "top",
-                },
+                { minHeight: 80, textAlignVertical: "top" },
               ]}
               placeholder="Enter reason"
               placeholderTextColor={colors.textTertiary}
