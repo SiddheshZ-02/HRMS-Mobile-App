@@ -1,18 +1,3 @@
-// import { StyleSheet, Text, View } from 'react-native'
-// import React from 'react'
-
-// const WorkFromHome = () => {
-//   return (
-//     <View>
-//       <Text>WorkFromHome</Text>
-//     </View>
-//   )
-// }
-
-// export default WorkFromHome
-
-// const styles = StyleSheet.create({})
-
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -96,8 +81,8 @@ const WorkFromHome = () => {
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<keyof wfhType>("reason");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortColumn, setSortColumn] = useState<keyof wfhType>("currentdate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -153,10 +138,9 @@ const WorkFromHome = () => {
     if (searchText) {
       const lowerSearch = searchText.toLowerCase();
       result = result.filter((item) =>
-        [
-          item.work_type?.toLowerCase(),
-          item.reason?.toLowerCase(),
-        ].some((value) => value?.includes(lowerSearch))
+        [item.work_type?.toLowerCase(), item.reason?.toLowerCase()].some(
+          (value) => value?.includes(lowerSearch)
+        )
       );
     }
 
@@ -186,19 +170,14 @@ const WorkFromHome = () => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
 
-      if (sortColumn === "dateFrom" || sortColumn === "currentdate") {
-        valueA = a.dateFrom || "";
-        valueB = b.dateFrom || "";
-      }
-
-      if (typeof valueA === "string" && typeof valueB === "string") {
+      // Handle date fields (dateFrom and currentdate)
+      if (sortColumn === "currentdate") {
+        const dateA = parseDateString(valueA as string) || new Date(0); // Fallback to epoch if invalid
+        const dateB = parseDateString(valueB as string) || new Date(0);
         return sortOrder === "asc"
-          ? valueA.localeCompare(valueB)
-          : valueB.localeCompare(valueA);
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
       }
-      return sortOrder === "asc"
-        ? (valueA as number) - (valueB as number)
-        : (valueB as number) - (valueA as number);
     });
   }, [filteredWfh, sortColumn, sortOrder]);
 
@@ -206,19 +185,6 @@ const WorkFromHome = () => {
     const from = page * itemsPerPage;
     return sortedWfh.slice(from, from + itemsPerPage);
   }, [sortedWfh, page, itemsPerPage]);
-
-  // const handleSort = useCallback(
-  //   (column: keyof wfhType) => {
-  //     if (sortColumn === column) {
-  //       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-  //     } else {
-  //       setSortColumn(column);
-  //       setSortOrder("asc");
-  //     }
-  //     setPage(0);
-  //   },
-  //   [sortColumn, sortOrder]
-  // );
 
   const handleCloseModal = useCallback(() => {
     setDateModalVisible(false);

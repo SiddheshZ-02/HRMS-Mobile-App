@@ -42,7 +42,7 @@ interface Employee {
   email: string;
 }
 
-interface dataType {
+interface meetDataType {
   meet_id: number;
   title: string;
   description: string;
@@ -85,7 +85,9 @@ const index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [holiday, setHoliday] = useState<holidayType[]>([]);
-  const [data, setData] = useState<dataType[]>([]);
+  const [data, setData] = useState<meetDataType[]>([]);
+  // console.log(data);
+
   const [expandedItems, setExpandedItems] = useState<{
     [key: number]: boolean;
   }>({});
@@ -95,9 +97,6 @@ const index = () => {
   const colors = Colors[colorScheme ?? "light"];
 
   const accessToken = useAuthStore((state) => state.accessToken);
-
-
-
 
   // Fetch meeting
   const fetchMeeting = async () => {
@@ -123,9 +122,7 @@ const index = () => {
     }
   };
 
-
-
-   const fetchHoliday = async () => {
+  const fetchHoliday = async () => {
     setLoading(true);
     try {
       const response = await fetch(
@@ -159,7 +156,13 @@ const index = () => {
     }));
   };
 
-  const MeetingCard = ({ item, index }: { item: dataType; index: number }) => {
+  const MeetingCard = ({
+    item,
+    index,
+  }: {
+    item: meetDataType;
+    index: number;
+  }) => {
     const isExpanded = expandedItems[item.meet_id] || false;
     const isUpcoming = new Date(item.expected_start_date) > new Date();
 
@@ -398,13 +401,16 @@ const index = () => {
               </View>
             ) : (
               <View style={styles.cardsContainer}>
-                {data.slice(0, 3).map((item, index) => (
+                {data.slice(0, 2).map((item, index) => (
                   <MeetingCard key={item.meet_id} item={item} index={index} />
                 ))}
-                {data.length > 3 && (
+                {data.length > 2 && (
                   <TouchableOpacity
                     onPress={() => router.push("/(protected)/meetingLists")}
-                    style={styles.viewMoreButton}
+                    style={[
+                      styles.viewMoreButton,
+                      { backgroundColor: colors.surface },
+                    ]}
                   >
                     <Text
                       style={[
@@ -412,7 +418,7 @@ const index = () => {
                         { color: BrandColors.primary },
                       ]}
                     >
-                      View {data.length - 3} more meetings
+                      View more meetings
                     </Text>
                     <AntDesign
                       name="doubleright"

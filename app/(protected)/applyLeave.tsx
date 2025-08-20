@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { DatePickerModal } from "react-native-paper-dates";
-import { FontAwesome } from "@expo/vector-icons";
+import { Entypo, FontAwesome } from "@expo/vector-icons";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { Colors } from "@/constants/Colors";
 import { useFocusEffect } from "expo-router";
@@ -266,8 +266,6 @@ export default function ApplyLeaveScreen() {
   );
 
   const handleApplyLeave = async (data: any) => {
- 
-
     try {
       const res = await fetch(`${BASE_URL}/leaves`, {
         method: "POST",
@@ -381,7 +379,7 @@ export default function ApplyLeaveScreen() {
       marginBottom: 6,
       fontWeight: "500",
       color: colors.text,
-      marginTop:20
+      marginTop: 20,
     },
     input: {
       borderWidth: 1,
@@ -491,7 +489,6 @@ export default function ApplyLeaveScreen() {
       justifyContent: "center",
       alignItems: "center",
       paddingVertical: 8,
-     
     },
     dropdownItemTxtStyle: {
       flex: 1,
@@ -576,7 +573,9 @@ export default function ApplyLeaveScreen() {
 
         {/* Leave Category */}
         <View style={[styles.dropdownContainer, { zIndex: 3000 }]}>
-          <Text style={styles.label}>Leave Category *</Text>
+          <Text style={styles.label}>
+            Leave Category<Text style={{ color: colors.error }}> *</Text>
+          </Text>
           <Controller
             control={control}
             name="leaveCategory"
@@ -598,17 +597,16 @@ export default function ApplyLeaveScreen() {
                 renderButton={(selectedItem, isOpen) => (
                   <View style={styles.dropdownButtonStyle}>
                     {selectedItem && (
-                      <Icon
-                        name={selectedItem.icon}
+                      <Entypo
+                        name={selectedItem.Entypo}
                         style={styles.dropdownButtonIconStyle}
                       />
-                    )
-                    }
+                    )}
                     <Text style={styles.dropdownButtonTxtStyle}>
                       {selectedItem?.title || "Select leave category"}
                     </Text>
-                    <Icon
-                      name={isOpen ? "chevron-up" : "chevron-down"}
+                    <Entypo
+                      name={isOpen ? "chevron-small-up" : "chevron-small-down"}
                       style={styles.dropdownButtonArrowStyle}
                     />
                   </View>
@@ -620,7 +618,6 @@ export default function ApplyLeaveScreen() {
                       ...(isSelected && { backgroundColor: colors.border }),
                     }}
                   >
-                   
                     <Text style={styles.dropdownItemTxtStyle}>
                       {item.title}
                     </Text>
@@ -628,7 +625,6 @@ export default function ApplyLeaveScreen() {
                 )}
                 showsVerticalScrollIndicator={false}
                 dropdownStyle={styles.dropdownMenuStyle}
-             
               />
             )}
           />
@@ -639,7 +635,9 @@ export default function ApplyLeaveScreen() {
 
         {/* Leave Type */}
         <View style={[styles.dropdownContainer, { zIndex: 2000 }]}>
-          <Text style={styles.label}>Leave Type *</Text>
+          <Text style={styles.label}>
+            Leave Type<Text style={{ color: colors.error }}> *</Text>
+          </Text>
           <Controller
             control={control}
             name="leaveType"
@@ -661,16 +659,16 @@ export default function ApplyLeaveScreen() {
                 renderButton={(selectedItem, isOpen) => (
                   <View style={styles.dropdownButtonStyle}>
                     {selectedItem && (
-                      <Icon
-                        name={selectedItem.icon}
+                      <Entypo
+                        name={selectedItem.Entypo}
                         style={styles.dropdownButtonIconStyle}
                       />
                     )}
                     <Text style={styles.dropdownButtonTxtStyle}>
                       {selectedItem?.title || "Select leave type"}
                     </Text>
-                    <Icon
-                      name={isOpen ? "chevron-up" : "chevron-down"}
+                    <Entypo
+                      name={isOpen ? "chevron-small-up" : "chevron-small-down"}
                       style={styles.dropdownButtonArrowStyle}
                     />
                   </View>
@@ -682,10 +680,6 @@ export default function ApplyLeaveScreen() {
                       ...(isSelected && { backgroundColor: colors.border }),
                     }}
                   >
-                    {/* <Icon
-                      name={item.icon}
-                      style={styles.dropdownItemIconStyle}
-                    /> */}
                     <Text style={styles.dropdownItemTxtStyle}>
                       {item.title}
                     </Text>
@@ -693,7 +687,6 @@ export default function ApplyLeaveScreen() {
                 )}
                 showsVerticalScrollIndicator={false}
                 dropdownStyle={styles.dropdownMenuStyle}
-          //  
               />
             )}
           />
@@ -703,7 +696,9 @@ export default function ApplyLeaveScreen() {
         </View>
 
         {/* Start Date */}
-        <Text style={styles.label}>Start Date *</Text>
+        <Text style={styles.label}>
+          Start Date<Text style={{ color: colors.error }}> *</Text>
+        </Text>
         <Controller
           control={control}
           name="startDate"
@@ -734,7 +729,9 @@ export default function ApplyLeaveScreen() {
         )}
 
         {/* End Date */}
-        <Text style={styles.label}>End Date *</Text>
+        <Text style={styles.label}>
+          End Date<Text style={{ color: colors.error }}> *</Text>
+        </Text>
         <Controller
           control={control}
           name="endDate"
@@ -765,7 +762,9 @@ export default function ApplyLeaveScreen() {
         )}
 
         {/* Reason */}
-        <Text style={styles.label}>Reason *</Text>
+        <Text style={styles.label}>
+          Reason<Text style={{ color: colors.error }}> *</Text>
+        </Text>
         <Controller
           control={control}
           name="reason"

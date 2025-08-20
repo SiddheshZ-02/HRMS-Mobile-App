@@ -74,8 +74,8 @@ const holidayLists = () => {
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<keyof holidayType>("days");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortColumn, setSortColumn] = useState<keyof holidayType>("dates");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -162,33 +162,63 @@ const holidayLists = () => {
   }, [holidays, searchText, startDate, endDate]);
 
   // Sorting logic
-  const sortedHolidays = useMemo(() => {
-    return [...filteredHolidays].sort((a, b) => {
-      let valueA = a[sortColumn];
-      let valueB = b[sortColumn];
+  // const sortedHolidays = useMemo(() => {
+  //   return [...filteredHolidays].sort((a, b) => {
+  //     let valueA = a[sortColumn];
+  //     let valueB = b[sortColumn];
 
-      // Handle dates column
+  //     // Handle dates column
+  //   if (sortColumn === "dates") {
+  //     // Convert to Date objects safely
+  //     const dateA = valueA ? new Date(valueA) : new Date(0); 
+  //     const dateB = valueB ? new Date(valueB) : new Date(0);
+
+  //     return sortOrder === "desc"
+  //       ? dateA.getTime() - dateB.getTime()
+  //       : dateB.getTime() - dateA.getTime();
+  //   }
+
+  //     if (typeof valueA === "string" && typeof valueB === "string") {
+  //       return sortOrder === "desc"
+  //         ? valueA.localeCompare(valueB)
+  //         : valueB.localeCompare(valueA);
+  //     }
+
+  //     return sortOrder === "desc"
+  //       ? (valueA as number) - (valueB as number)
+  //       : (valueB as number) - (valueA as number);
+  //   });
+  // }, [filteredHolidays, sortColumn, sortOrder]);
+
+
+const sortedHolidays = useMemo(() => {
+  return [...filteredHolidays].sort((a, b) => {
+    let valueA = a[sortColumn];
+    let valueB = b[sortColumn];
+
+    // Handle dates column
     if (sortColumn === "dates") {
-      // Convert to Date objects safely
-      const dateA = valueA ? new Date(valueA) : new Date(0); 
-      const dateB = valueB ? new Date(valueB) : new Date(0);
-
+      const dateA = parseDateString(valueA as string) || new Date(0); // Fallback to epoch if invalid
+      const dateB = parseDateString(valueB as string) || new Date(0);
       return sortOrder === "asc"
         ? dateA.getTime() - dateB.getTime()
         : dateB.getTime() - dateA.getTime();
     }
 
-      if (typeof valueA === "string" && typeof valueB === "string") {
-        return sortOrder === "asc"
-          ? valueA.localeCompare(valueB)
-          : valueB.localeCompare(valueA);
-      }
-
+    // Handle string fields (e.g., days)
+    if (typeof valueA === "string" && typeof valueB === "string") {
       return sortOrder === "asc"
-        ? (valueA as number) - (valueB as number)
-        : (valueB as number) - (valueA as number);
-    });
-  }, [filteredHolidays, sortColumn, sortOrder]);
+        ? valueA.localeCompare(valueB)
+        : valueB.localeCompare(valueA);
+    }
+
+    // Handle numeric fields (e.g., id)
+    return sortOrder === "asc"
+      ? (valueA as number) - (valueB as number)
+      : (valueB as number) - (valueA as number);
+  });
+}, [filteredHolidays, sortColumn, sortOrder]);
+
 
   // Pagination
   const paginatedHolidays = useMemo(() => {

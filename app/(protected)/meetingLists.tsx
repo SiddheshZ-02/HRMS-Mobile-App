@@ -94,7 +94,7 @@ const MeetingList = () => {
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<keyof MeetingType>("title");
+  const [sortColumn, setSortColumn] = useState<keyof MeetingType>("expected_start_date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -199,6 +199,14 @@ const MeetingList = () => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
 
+
+      // if (sortColumn === "expected_start_date") {
+      //   const dateA = parseDateString(valueA as string) || new Date(0); // Fallback to epoch if invalid
+      //   const dateB = parseDateString(valueB as string) || new Date(0);
+      //   return sortOrder === "desc"
+      //     ? dateA.getTime() - dateB.getTime()
+      //     : dateB.getTime() - dateA.getTime();
+      // }
       // Handle employee_id array
       if (sortColumn === "employee_id") {
         valueA = a.employee_id[0]?.firstname || "";
@@ -214,6 +222,7 @@ const MeetingList = () => {
       return sortOrder === "asc"
         ? (valueA as number) - (valueB as number)
         : (valueB as number) - (valueA as number);
+
     });
   }, [filteredMeetings, sortColumn, sortOrder]);
 
@@ -344,14 +353,7 @@ const MeetingList = () => {
           borderBottomColor: colors.border 
         }
       ]}>
-        {/* <View style={[styles.cellContainer, { width: columnWidths.edit }]}>
-          <TouchableOpacity
-            // onPress={() => router.push(`/edit-meeting/${item.meet_id}`)}
-            style={styles.cell}
-          >
-            <Feather name="edit" size={14} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View> */}
+       
         <View style={[styles.cellContainer, { width: columnWidths.title }]}>
           <Text selectable style={[styles.cell, styles.nameCell, { color: colors.primary }]}>
             {item.title}

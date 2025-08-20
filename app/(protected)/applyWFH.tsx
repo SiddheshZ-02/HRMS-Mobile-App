@@ -12,8 +12,7 @@ import {
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { DatePickerModal } from "react-native-paper-dates";
-import { FontAwesome } from "@expo/vector-icons";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { Entypo, FontAwesome } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
 import SelectDropdown from "react-native-select-dropdown";
 import { BASE_URL } from "@/constants/Config";
@@ -153,7 +152,6 @@ export default function ApplyWFHScreen() {
 
       if (!res.ok) {
         throw new Error(result.message || "Failed to apply WFH");
-        
       }
     } catch (error) {
       console.error("Error applying WFH:", error);
@@ -281,7 +279,7 @@ export default function ApplyWFHScreen() {
     dropdownButtonTxtStyle: {
       flex: 1,
       fontSize: dimensions.fontSize.body,
-      fontWeight: "500",
+      fontWeight: "400",
       color: colors.text,
     },
     dropdownButtonArrowStyle: {
@@ -305,7 +303,7 @@ export default function ApplyWFHScreen() {
       width: "80%",
     },
     dropdownItemStyle: {
-      width: "80%",
+      width: "100%",
       flexDirection: "row",
       paddingHorizontal: 12,
       justifyContent: "center",
@@ -315,7 +313,7 @@ export default function ApplyWFHScreen() {
     dropdownItemTxtStyle: {
       flex: 1,
       fontSize: dimensions.fontSize.body,
-      fontWeight: "500",
+      fontWeight: "400",
       color: colors.text,
     },
     dropdownItemIconStyle: {
@@ -353,7 +351,9 @@ export default function ApplyWFHScreen() {
         <Text style={styles.title}>Apply WFH</Text>
 
         {/* Date */}
-        <Text style={styles.label}>Date *</Text>
+        <Text style={styles.label}>
+          Date<Text style={{ color: colors.error }}> *</Text>
+        </Text>
         <Controller
           control={control}
           name="dateFrom"
@@ -381,7 +381,9 @@ export default function ApplyWFHScreen() {
 
         {/* WFH Mode */}
         <View style={styles.dropdownContainer}>
-          <Text style={styles.label}>WFH Mode *</Text>
+          <Text style={styles.label}>
+            WFH Mode<Text style={{ color: colors.error }}> *</Text>
+          </Text>
           <Controller
             control={control}
             name="work_type"
@@ -403,16 +405,17 @@ export default function ApplyWFHScreen() {
                 renderButton={(selectedItem, isOpen) => (
                   <View style={styles.dropdownButtonStyle}>
                     {selectedItem && (
-                      <Icon
-                        name={selectedItem.icon}
+                      <Entypo
+                        name={selectedItem.Entypo}
                         style={styles.dropdownButtonIconStyle}
                       />
                     )}
                     <Text style={styles.dropdownButtonTxtStyle}>
                       {selectedItem?.title || "Select WFH mode"}
                     </Text>
-                    <Icon
-                      name={isOpen ? "chevron-up" : "chevron-down"}
+                    {/* <Entypo name="chevron-small-up" size={24} color="black" /> */}
+                    <Entypo
+                      name={isOpen ? "chevron-small-up" : "chevron-small-down"}
                       style={styles.dropdownButtonArrowStyle}
                     />
                   </View>
@@ -440,7 +443,9 @@ export default function ApplyWFHScreen() {
         </View>
 
         {/* Reason */}
-        <Text style={styles.label}>Reason *</Text>
+        <Text style={styles.label}>
+          Reason<Text style={{ color: colors.error }}> *</Text>
+        </Text>
         <Controller
           control={control}
           name="reason"

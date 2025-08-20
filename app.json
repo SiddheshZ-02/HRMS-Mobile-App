@@ -13,8 +13,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/actifylogo1.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/actifylogo1.png"
+       
       },
       "edgeToEdgeEnabled": true,
       "package": "com.siddhesh14.hrapp"
@@ -31,8 +31,8 @@
         {
           "image": "./assets/images/actifylogo.png",
           "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "resizeMode": "contain"
+        
         }
       ],
       "expo-secure-store"

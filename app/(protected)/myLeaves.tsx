@@ -105,7 +105,7 @@ const myLeaves = () => {
   const [page, setPage] = useState(0);
   const [sortColumn, setSortColumn] =
     useState<keyof leavetype>("leavecategory");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -115,8 +115,7 @@ const myLeaves = () => {
 
   const router = useRouter();
 
-
-      const accessToken = useAuthStore((state) => state.accessToken);
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", () => {
@@ -137,16 +136,13 @@ const myLeaves = () => {
   const fetchLeave = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        BASE_URL + `/leaves`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            accesstoken: accessToken || " ",
-          },
-        }
-      );
+      const response = await fetch(BASE_URL + `/leaves`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || " ",
+        },
+      });
       const data = await response.json();
       setIsLeave(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -198,6 +194,7 @@ const myLeaves = () => {
     return [...filteredLeaves].sort((a, b) => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
+
       if (typeof valueA === "string" && typeof valueB === "string") {
         return sortOrder === "asc"
           ? valueA.localeCompare(valueB)
