@@ -78,7 +78,9 @@ const _layout = () => {
     if (!isRedirecting) {
       setIsRedirecting(true);
       logout();
-      router.replace("/");
+      // router.replace("/");
+      
+
     }
   };
 
@@ -444,14 +446,7 @@ const _layout = () => {
                 size={30}
                 color={colors.textPrimary}
               />
-              {/* <Text
-                style={[
-                  styles.drawerItemText,
-                  { color: colors.textPrimary, marginLeft: 10 },
-                ]}
-              >
-                {theme === "dark" ? "Light Theme" : "Dark Theme"}
-              </Text> */}
+            
             </TouchableOpacity>
           </View>
         </DrawerContentScrollView>

@@ -1,5 +1,4 @@
-// File: src/app/(protected)/index.tsx
-
+import { BASE_URL } from "@/constants/Config";
 import useAuthStore from "@/store/AuthStore";
 import {
   AntDesign,
@@ -13,6 +12,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Linking,
+  Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -21,8 +21,6 @@ import {
   View,
   useColorScheme,
 } from "react-native";
-import { privateAxios } from "@/utils/axiosConfig";
-import { BASE_URL } from "@/constants/Config";
 
 const { width } = Dimensions.get("window");
 
@@ -86,68 +84,96 @@ const index = () => {
   const [error, setError] = useState<string | null>(null);
   const [holiday, setHoliday] = useState<holidayType[]>([]);
   const [data, setData] = useState<meetDataType[]>([]);
-  // console.log(data);
-
   const [expandedItems, setExpandedItems] = useState<{
     [key: number]: boolean;
   }>({});
+  const [showSessionTimeout, setShowSessionTimeout] = useState(false);
 
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { accessToken, roles, logout } = useAuthStore((state) => state);
 
-  const accessToken = useAuthStore((state) => state.accessToken);
-
-  // Fetch meeting
+  // Fetch meeting with proper error handling
   const fetchMeeting = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        BASE_URL + `/project/manager/meeting`,
-        // "https://hr1.actifyzone.com/hr-uat/HR/Portal/project/manager/meeting",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            accesstoken: accessToken || "",
-          },
-        }
-      );
+      const response = await fetch(`${BASE_URL}/project/manager/meeting`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || "",
+        },
+      });
+
+      if (response.status === 401) {
+        setShowSessionTimeout(true);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch meetings");
+      }
+
       const res = await response.json();
       setData(Array.isArray(res) ? res : []);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching meetings:", error);
+      setError("Failed to load meetings. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch holidays with proper error handling
   const fetchHoliday = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        BASE_URL + `/holidays/month/list`,
-        // "https://hr1.actifyzone.com/hr-uat/HR/Portal/holidays/month/list",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            accesstoken: accessToken || "",
-          },
-        }
-      );
+      const response = await fetch(`${BASE_URL}/holidays/month/list`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || "",
+        },
+      });
+
+      if (response.status === 401) {
+        setShowSessionTimeout(true);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch holidays");
+      }
+
       const res = await response.json();
       setHoliday(Array.isArray(res) ? res : []);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching holidays:", error);
+      setError("Failed to load holidays. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Handle session timeout and logout
+  useEffect(() => {
+    if (!accessToken) {
+      setShowSessionTimeout(true);
+    }
+  }, [accessToken]);
+
+  // Fetch data on component mount
   useEffect(() => {
     fetchMeeting();
     fetchHoliday();
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    setShowSessionTimeout(false);
+    router.replace("/"); // Redirect to login screen
+  };
 
   const toggleDropdown = (id: number) => {
     setExpandedItems((prev) => ({
@@ -179,7 +205,7 @@ const index = () => {
               <Text
                 style={[styles.meetingTitle, { color: colors.textPrimary }]}
               >
-                {item.title}
+                {item.title ?? ""}
               </Text>
             </View>
             <Text
@@ -188,12 +214,12 @@ const index = () => {
                 { color: colors.textSecondary },
               ]}
             >
-              {item.description}
+              {item.description ?? ""}
             </Text>
           </View>
           <View style={styles.rightSection}>
             <Text style={[styles.meetingDate, { color: colors.textTertiary }]}>
-              {item.expected_start_date}
+              {item.expected_start_date ?? ""}
             </Text>
             <TouchableOpacity
               onPress={() => {
@@ -208,7 +234,7 @@ const index = () => {
             </TouchableOpacity>
           </View>
         </View>
-        {item.employee_id.length > 0 && (
+        {item.employee_id && item.employee_id.length > 0 && (
           <TouchableOpacity
             style={styles.dropdownHeader}
             onPress={() => toggleDropdown(item.meet_id)}
@@ -216,7 +242,7 @@ const index = () => {
             <Text
               style={[styles.employeeTitle, { color: colors.textSecondary }]}
             >
-              {item.employee_id.length} Participants
+              {item.employee_id?.length ?? 0} Participants
             </Text>
             <MaterialIcons
               name={isExpanded ? "expand-less" : "expand-more"}
@@ -227,8 +253,8 @@ const index = () => {
         )}
         {isExpanded && (
           <View style={styles.employeeList}>
-            {item.employee_id.map((emp) => (
-              <View key={emp.id} style={styles.employeeItem}>
+            {item.employee_id.map((emp, idx) => (
+              <View key={emp.id || idx}>
                 <View
                   style={[
                     styles.employeeAvatar,
@@ -241,14 +267,14 @@ const index = () => {
                       { color: BrandColors.primary },
                     ]}
                   >
-                    {emp.firstname.charAt(0)}
-                    {emp.lastname.charAt(0)}
+                    {emp.firstname ? emp.firstname.charAt(0) : ""}
+                    {emp.lastname ? emp.lastname.charAt(0) : ""}
                   </Text>
                 </View>
                 <Text
                   style={[styles.employeeName, { color: colors.textPrimary }]}
                 >
-                  {emp.firstname} {emp.lastname}
+                  {emp.firstname ?? ""} {emp.lastname ?? ""}
                 </Text>
               </View>
             ))}
@@ -269,13 +295,13 @@ const index = () => {
               color={BrandColors.warning}
             />
             <Text style={[styles.holidayTitle, { color: colors.textPrimary }]}>
-              {item.days}
+              {item.days ?? ""}
             </Text>
           </View>
           <Text
             style={[styles.holidayDescription, { color: colors.textSecondary }]}
           >
-            {item.dateInYears}
+            {item.dateInYears ?? ""}
           </Text>
         </View>
         <View
@@ -297,6 +323,36 @@ const index = () => {
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
+      <Modal visible={showSessionTimeout} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.3)",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#fff",
+              padding: 24,
+              borderRadius: 20,
+              alignItems: "center",
+              minWidth: 300,
+            }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8 }}>
+              Session Timeout
+            </Text>
+            <Text style={{ marginVertical: 12, textAlign: "center" }}>
+              Your session has expired. Please log in again.
+            </Text>
+            <TouchableOpacity onPress={handleLogout} style={{ marginTop: 8 }}>
+              <Text style={{ color: "blue", fontSize: 16 }}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
@@ -332,7 +388,7 @@ const index = () => {
                     { color: colors.textTertiary },
                   ]}
                 >
-                  {data.length} meetings scheduled
+                  {(data?.length ?? 0)} meetings scheduled
                 </Text>
               </View>
             </View>
@@ -366,7 +422,7 @@ const index = () => {
             ) : error ? (
               <View style={styles.errorContainer}>
                 <Text style={[styles.errorText, { color: colors.textPrimary }]}>
-                  {error}
+                  {error ?? ""}
                 </Text>
                 <TouchableOpacity
                   onPress={fetchMeeting}
@@ -378,7 +434,7 @@ const index = () => {
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
-            ) : data.length === 0 ? (
+            ) : (data?.length ?? 0) === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons
                   name="calendar-outline"
@@ -402,9 +458,11 @@ const index = () => {
             ) : (
               <View style={styles.cardsContainer}>
                 {data.slice(0, 2).map((item, index) => (
-                  <MeetingCard key={item.meet_id} item={item} index={index} />
+                  <View key={item.meet_id || index}>
+                    <MeetingCard key={item.meet_id} item={item} index={index} />
+                  </View>
                 ))}
-                {data.length > 2 && (
+                {(data?.length ?? 0) > 2 && (
                   <TouchableOpacity
                     onPress={() => router.push("/(protected)/meetingLists")}
                     style={[
@@ -462,7 +520,7 @@ const index = () => {
                     { color: colors.textTertiary },
                   ]}
                 >
-                  {holiday.length} holidays this month
+                  {(holiday?.length ?? 0)} holidays this month
                 </Text>
               </View>
             </View>
@@ -496,7 +554,7 @@ const index = () => {
             ) : error ? (
               <View style={styles.errorContainer}>
                 <Text style={[styles.errorText, { color: colors.textPrimary }]}>
-                  {error}
+                  {error ?? ""}
                 </Text>
                 <TouchableOpacity
                   onPress={fetchHoliday}
@@ -508,7 +566,7 @@ const index = () => {
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
-            ) : holiday.length === 0 ? (
+            ) : (holiday?.length ?? 0) === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons
                   name="sunny-outline"
@@ -531,10 +589,12 @@ const index = () => {
               </View>
             ) : (
               <View style={styles.cardsContainer}>
-                {holiday.slice(0, 3).map((item) => (
-                  <HolidayCard key={item.id} item={item} />
+                {holiday.slice(0, 3).map((item, idx) => (
+                  <View key={item.id || idx}>
+                    <HolidayCard key={item.id} item={item} />
+                  </View>
                 ))}
-                {holiday.length > 3 && (
+                {(holiday?.length ?? 0) > 3 && (
                   <TouchableOpacity
                     onPress={() => router.push("/(protected)/holidayLists")}
                     style={styles.viewMoreButton}
@@ -545,7 +605,7 @@ const index = () => {
                         { color: BrandColors.primary },
                       ]}
                     >
-                      View {holiday.length - 3} more holidays
+                      View {(holiday?.length ?? 0) - 3} more holidays
                     </Text>
                     <AntDesign
                       name="doubleright"
@@ -676,7 +736,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-
   sectionIcon: {
     width: 40,
     height: 40,
@@ -730,7 +789,6 @@ const styles = StyleSheet.create({
   },
   meetingDetails: {
     flex: 1,
-    // paddingRight: 12,
   },
   meetingTitleRow: {
     flexDirection: "row",
@@ -746,7 +804,6 @@ const styles = StyleSheet.create({
   meetingDescription: {
     fontSize: 14,
     fontWeight: "500",
-    // marginLeft: 24,
   },
   rightSection: {
     alignItems: "flex-end",

@@ -1,6 +1,6 @@
+import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import * as SecureStore from "expo-secure-store";
 
 export interface AuthState {
   accessToken: string | null;
@@ -84,6 +84,7 @@ const useAuthStore = create<AuthState>()(
             statusMessage: null,
             isAuthenticated: false,
           });
+            
           console.log("Logout successful, SecureStore cleared");
         } catch (error) {
           console.error("Failed to clear SecureStore on logout:", error);

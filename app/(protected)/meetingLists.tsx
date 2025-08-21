@@ -1,5 +1,6 @@
+import { BASE_URL } from "@/constants/Config";
+import useAuthStore from "@/store/AuthStore";
 import { Ionicons } from "@expo/vector-icons";
-import Feather from "@expo/vector-icons/Feather";
 import { LegendList } from "@legendapp/list";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,11 +18,8 @@ import {
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { RefreshControl } from "react-native-gesture-handler";
-import { FAB } from "react-native-paper";
 import { DatePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
-import useAuthStore from "@/store/AuthStore";
-import { BASE_URL } from "@/constants/Config";
 
 const { width } = Dimensions.get("window");
 
@@ -572,7 +570,7 @@ const MeetingList = () => {
                     renderItem={({ item, index }) => (
                       <MeetingListRow item={item} index={index} />
                     )}
-                    keyExtractor={(item) => item.meet_id.toString()}
+                    keyExtractor={(item, idx) => item?.meet_id?.toString() ?? String(item?.meet_id) ?? String(idx)}
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />

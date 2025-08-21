@@ -1,3 +1,5 @@
+import { BASE_URL } from "@/constants/Config";
+import useAuthStore from "@/store/AuthStore";
 import { FontAwesome } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -17,8 +19,6 @@ import {
 import { AutocompleteDropdown } from "react-native-autocomplete-dropdown";
 import { DatePickerModal, TimePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
-import { BASE_URL } from "@/constants/Config";
-import useAuthStore from "@/store/AuthStore";
 // import ScreenWrapper from "@/components/ScreenWrapper";
 
 const { height, width } = Dimensions.get("window");
@@ -143,7 +143,7 @@ const createMeeting = () => {
   const formatTime = useCallback((hours: number, minutes: number) => {
     const period = hours >= 12 ? "PM" : "AM";
     const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
+    return `${displayHours}:${minutes?.toString().padStart(2, "0") ?? String(minutes).padStart(2, "0") ?? "00"} ${period}`;
   }, []);
 
   const onStartDateConfirm = useCallback(
@@ -195,10 +195,10 @@ const createMeeting = () => {
       const employeesData: any[] = Array.isArray(res) ? res : [];
       setEmployees(employeesData as emplyoeeType[]);
       const index = employeesData.map((emp: any, idx: number) => {
-        const id = (emp?.id ?? emp?.employee_id ?? idx).toString();
+        const id = (emp?.id ?? emp?.employee_id ?? idx);
         const title = `${emp?.firstname ?? ""} ${emp?.lastname ?? ""}`.trim();
         const searchKey = title.toLowerCase();
-        return { id, title, searchKey };
+        return { id: id?.toString() ?? String(id) ?? String(idx), title, searchKey };
       });
       setEmployeesIndex(index);
     } catch (error) {
@@ -228,8 +228,8 @@ const createMeeting = () => {
       const clientsData = Array.isArray(res) ? res : [];
       setClients(clientsData);
       setClientsSuggestions(
-        clientsData.map((client) => ({
-          id: client.id.toString(),
+        clientsData.map((client, idx) => ({
+          id: client.id?.toString() ?? String(client.id) ?? String(idx),
           title: client.client_name,
         }))
       );
@@ -251,8 +251,8 @@ const createMeeting = () => {
       console.log("Available clients:", clients);
 
       if (!query || query.length < 1) {
-        const allSuggestions = clients.map((client) => ({
-          id: client.id.toString(),
+        const allSuggestions = clients.map((client, idx) => ({
+          id: client.id?.toString() ?? String(client.id) ?? String(idx),
           title: client.client_name,
         }));
         console.log("Setting all suggestions:", allSuggestions);
@@ -264,8 +264,8 @@ const createMeeting = () => {
         .filter((client) =>
           client.client_name.toLowerCase().includes(query.toLowerCase())
         )
-        .map((client) => ({
-          id: client.id.toString(),
+        .map((client, idx) => ({
+          id: client.id?.toString() ?? String(client.id) ?? String(idx),
           title: client.client_name,
         }));
 
@@ -606,8 +606,8 @@ const createMeeting = () => {
                       autoCapitalize: "none",
                       style: styles.dropdownInput,
                       onFocus: () => {
-                        const allSuggestions = clients.map((c) => ({
-                          id: c.id.toString(),
+                        const allSuggestions = clients.map((c, idx) => ({
+                          id: c.id?.toString() ?? String(c.id) ?? String(idx),
                           title: c.client_name,
                         }));
                         setClientsSuggestions(allSuggestions);

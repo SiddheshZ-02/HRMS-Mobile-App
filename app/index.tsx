@@ -1,26 +1,25 @@
+import { BASE_URL } from "@/constants/Config";
+import useAuthStore from "@/store/AuthStore";
+import { publicAxios } from "@/utils/axiosConfig";
+import { toast, ToastPosition } from "@backpackapp-io/react-native-toast";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  Image,
-  Keyboard,
-  useColorScheme,
-  KeyboardAvoidingView,
-  Platform,
   TouchableWithoutFeedback,
+  View
 } from "react-native";
-import { Controller, useForm } from "react-hook-form";
-import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
-import { toast, ToastPosition } from "@backpackapp-io/react-native-toast";
-import useAuthStore from "@/store/AuthStore";
-import { publicAxios } from "@/utils/axiosConfig";
-import { BASE_URL } from "@/constants/Config";
 
 type LoginFormData = {
   username: string;
@@ -44,6 +43,10 @@ const index = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStoreRehydrated, setIsStoreRehydrated] = useState(false);
+  const { isAuthenticated, login, logout, accessToken,roles } = useAuthStore((state) => state);
+ 
+
 
   const {
     control,
@@ -58,7 +61,34 @@ const index = () => {
     },
   });
 
-  const login = useAuthStore((state) => state.login);
+
+
+  useEffect(() => {
+    const rehydrateAndValidate = async () => {
+      try {
+        await useAuthStore.persist.rehydrate();
+        const state = useAuthStore.getState();
+        if (state.accessToken) {
+          // Only pass state, don't spread accessToken twice
+          login({ ...state });
+        }
+        setIsStoreRehydrated(true);
+      } catch {
+        setIsStoreRehydrated(true);
+      }
+    };
+    rehydrateAndValidate();
+  }, [login]);
+
+
+
+  useEffect(() => {
+    if (isStoreRehydrated && isAuthenticated) {
+      router.replace("/(protected)");
+    }
+  }, [isAuthenticated, router, isStoreRehydrated]);
+
+
 
   const handleLogin = async (data: LoginFormData) => {
     try {
@@ -80,6 +110,9 @@ const index = () => {
           statusCode: resData.status_code,
           statusMessage: resData.status_message,
         });
+
+      
+
         toast.success(resData.message || "Signed in successfully", {
           position: ToastPosition.BOTTOM,
           duration: 3000,
@@ -146,6 +179,22 @@ const index = () => {
   useEffect(() => {
     setData();
   }, []);
+
+
+
+  
+
+  if (!isStoreRehydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+  if (isAuthenticated) {
+    return null;
+  }
+
 
   return (
     <KeyboardAvoidingView

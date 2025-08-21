@@ -5,13 +5,13 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import "react-native-reanimated";
 // import { useColorScheme } from "@/components/useColorScheme";
-import { Toasts } from "@backpackapp-io/react-native-toast";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { PaperProvider, DefaultTheme } from "react-native-paper";
 import useAuthStore from "@/store/AuthStore";
 import { publicAxios } from "@/utils/axiosConfig";
+import { Toasts } from "@backpackapp-io/react-native-toast";
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { DefaultTheme, PaperProvider } from "react-native-paper";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -32,7 +32,7 @@ export default function RootLayout() {
   });
 
   const [isStoreRehydrated, setIsStoreRehydrated] = useState(false);
-  const { isAuthenticated, setAuthenticated } = useAuthStore((state) => state);
+  const { isAuthenticated } = useAuthStore((state) => state);
   const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function RootLayout() {
         const state = useAuthStore.getState();
 
         if (state.accessToken) {
-          setAuthenticated(true);
+          // setIsAuthenticated(true); // This line is removed
         }
 
         // Check SecureStore directly for token
@@ -95,7 +95,7 @@ export default function RootLayout() {
       }
       setTimeout(() => {
         SplashScreen.hideAsync();
-      }, 300);
+      }, 2000);
     }
   }, [loaded, isStoreRehydrated, isAuthenticated, router]);
 
@@ -115,7 +115,7 @@ export default function RootLayout() {
       }}
     >
       <GestureHandlerRootView>
-        <StatusBar animated={true} barStyle={"dark-content"} />
+        <StatusBar animated={true} barStyle={"light-content"} />
         <Stack>
           <Stack.Protected guard={!isAuthenticated}>
             <Stack.Screen 

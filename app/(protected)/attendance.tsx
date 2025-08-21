@@ -1,24 +1,24 @@
+import { BASE_URL } from "@/constants/Config";
+import useAuthStore from "@/store/AuthStore";
 import { Ionicons } from "@expo/vector-icons";
 import { LegendList } from "@legendapp/list";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { RefreshControl } from "react-native-gesture-handler";
 import { DatePickerModal } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
-import useAuthStore from "@/store/AuthStore";
-import { BASE_URL } from "@/constants/Config";
 
 const { width } = Dimensions.get("window");
 
@@ -614,7 +614,7 @@ const Attendance = () => {
                     renderItem={({ item, index }) => (
                       <AttendanceRow item={item} index={index} />
                     )}
-                    keyExtractor={(item) => item.id.toString()}
+                    keyExtractor={(item, idx) => item?.id?.toString() ?? String(item?.id) ?? String(idx)}
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />
