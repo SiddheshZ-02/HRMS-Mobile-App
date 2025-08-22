@@ -767,15 +767,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-  sortableHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-  },
-  activeSortHeader: {
-    // color property removed as it's not valid for ViewStyle
-  },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 12,
@@ -795,12 +786,8 @@ const styles = StyleSheet.create({
   nameCell: {
     fontWeight: "600",
   },
-  emailCell: {
-    fontWeight: "500",
-  },
-  dateCell: {
-    fontSize: 12,
-  },
+ 
+ 
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

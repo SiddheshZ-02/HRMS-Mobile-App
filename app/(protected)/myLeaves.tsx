@@ -165,6 +165,7 @@ const myLeaves = () => {
           item.leavecategory?.toLowerCase(),
           item.leaveType?.toLowerCase(),
           item.reason?.toLowerCase(),
+          item.currentdate?.toLowerCase(),
         ].some((value) => value?.includes(lowerSearch))
       );
     }
@@ -175,9 +176,7 @@ const myLeaves = () => {
       const endBound = new Date(endDate);
       endBound.setHours(23, 59, 59, 999);
       result = result.filter((item) => {
-        // const parsedFrom = new Date(item.dateFrom);
-        // return parsedFrom >= startBound && parsedFrom <= endBound;
-        const parsed = parseDateString(item.dateFrom);
+        const parsed = parseDateString(item.currentdate);
         if (!parsed) return false;
         const itemDay = new Date(
           parsed.getFullYear(),
@@ -472,7 +471,7 @@ const myLeaves = () => {
               styles.cell,
               {
                 color:
-                  item.carried_forward_leave === "no"
+                  item.active === false
                     ? colors.error
                     : colors.success,
               },

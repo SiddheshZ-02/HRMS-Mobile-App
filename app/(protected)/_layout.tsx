@@ -25,9 +25,10 @@ import {
   useColorScheme,
 } from "react-native";
 import Collapsible from "react-native-collapsible";
-import { toast, ToastPosition } from "@backpackapp-io/react-native-toast";
+import { Modal } from "react-native";
 import useAuthStore from "@/store/AuthStore";
 import { en, registerTranslation } from "react-native-paper-dates";
+import { BASE_URL } from "@/constants/Config";
 
 registerTranslation("en", en);
 
@@ -40,8 +41,9 @@ const _layout = () => {
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState(systemColorScheme ?? "light");
   const colors = Colors[theme];
+  const [showSessionTimeout, setShowSessionTimeout] = useState(false);
 
-  const { logout, companyId, accessToken } = useAuthStore();
+  const { accessToken, roles, logout } = useAuthStore((state) => state);
 
   useEffect(() => {
     const loadTheme = async () => {
@@ -73,15 +75,36 @@ const _layout = () => {
   };
 
   const handleLogout = () => {
-    // console.log("Logging out, Access Token was:", accessToken);
-
     if (!isRedirecting) {
       setIsRedirecting(true);
       logout();
-      // router.replace("/");
-      
-
     }
+  };
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const response = await fetch(BASE_URL + `/Roles`, {
+          method: "GET",
+          headers: {
+            accesstoken: accessToken || "",
+          },
+        });
+
+        if (response.status === 401) {
+          setShowSessionTimeout(true);
+          return;
+        }
+      } catch (error) {}
+    };
+
+    fetchRole();
+  }, [path]);
+
+  const handleIsLogout = () => {
+    logout();
+    setShowSessionTimeout(false);
+    router.replace("/"); // Redirect to login screen
   };
 
   const CustomDrawer = (props: DrawerContentComponentProps) => {
@@ -247,169 +270,281 @@ const _layout = () => {
                   List Of Holidays
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.subItem,
-                  path === "/applyLeave" && [
-                    styles.activeSubItem,
-                    {
-                      backgroundColor: colors.surfaceVariant,
-                      borderLeftColor: colors.primary,
-                    },
-                  ],
-                ]}
-                onPress={() => {
-                  requestAnimationFrame(() => {
-                    router.push("/(protected)/applyLeave");
-                  });
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="airplane-takeoff"
-                  size={22}
-                  color={
-                    path === "/applyLeave"
-                      ? colors.primary
-                      : colors.textTertiary
-                  }
-                />
-                <Text
-                  style={[styles.subItemText, { color: colors.textPrimary }]}
-                >
-                  Apply Leave
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.subItem,
-                  path === "/myLeaves" && [
-                    styles.activeSubItem,
-                    {
-                      backgroundColor: colors.surfaceVariant,
-                      borderLeftColor: colors.primary,
-                    },
-                  ],
-                ]}
-                onPress={() => {
-                  requestAnimationFrame(() => {
-                    router.push("/(protected)/myLeaves");
-                  });
-                }}
-              >
-                <FontAwesome5
-                  name="calendar-day"
-                  size={22}
-                  color={
-                    path === "/myLeaves" ? colors.primary : colors.textTertiary
-                  }
-                />
-                <Text
-                  style={[styles.subItemText, { color: colors.textPrimary }]}
-                >
-                  My Leave
-                </Text>
-              </TouchableOpacity>
+
+              {roles === "Admin" ? (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.subItem,
+                      path === "/manageLeaves" && [
+                        styles.activeSubItem,
+                        {
+                          backgroundColor: colors.surfaceVariant,
+                          borderLeftColor: colors.primary,
+                        },
+                      ],
+                    ]}
+                    onPress={() => {
+                      requestAnimationFrame(() => {
+                        router.push("/(protected)/manageLeaves");
+                      });
+                    }}
+                  >
+                    <MaterialIcons
+                      name="manage-accounts"
+                      size={24}
+                      color={
+                        path === "/manageLeaves"
+                          ? colors.primary
+                          : colors.textTertiary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.subItemText,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      Manage Leaves
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={[styles.divider]} />
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.subItem,
+                      path === "/applyLeave" && [
+                        styles.activeSubItem,
+                        {
+                          backgroundColor: colors.surfaceVariant,
+                          borderLeftColor: colors.primary,
+                        },
+                      ],
+                    ]}
+                    onPress={() => {
+                      requestAnimationFrame(() => {
+                        router.push("/(protected)/applyLeave");
+                      });
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="airplane-takeoff"
+                      size={22}
+                      color={
+                        path === "/applyLeave"
+                          ? colors.primary
+                          : colors.textTertiary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.subItemText,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      Apply Leave
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.subItem,
+                      path === "/myLeaves" && [
+                        styles.activeSubItem,
+                        {
+                          backgroundColor: colors.surfaceVariant,
+                          borderLeftColor: colors.primary,
+                        },
+                      ],
+                    ]}
+                    onPress={() => {
+                      requestAnimationFrame(() => {
+                        router.push("/(protected)/myLeaves");
+                      });
+                    }}
+                  >
+                    <FontAwesome5
+                      name="calendar-day"
+                      size={22}
+                      color={
+                        path === "/myLeaves"
+                          ? colors.primary
+                          : colors.textTertiary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.subItemText,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      My Leave
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </Collapsible>
 
-            <TouchableOpacity
-              style={[styles.sectionHeader, { borderColor: colors.border }]}
-              onPress={() => {
-                requestAnimationFrame(() => {
-                  setIsWFHCollaps(!isWFHCollaps);
-                  setIsLeavesCollaps(true);
-                });
-              }}
-            >
-              <View style={styles.sectionHeaderContent}>
-                <Entypo
-                  name="add-to-list"
-                  size={24}
-                  color={isWFHCollaps ? colors.textTertiary : colors.primary}
-                />
-                <Text
-                  style={[styles.sectionTitle, { color: colors.textPrimary }]}
+            {roles === "Admin" ? (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.drawerItem,
+                    props.state.routeNames[props.state.index] ===
+                      "manageWFH" && [
+                      styles.activeDrawerItem,
+                      {
+                        backgroundColor: colors.surfaceVariant,
+                        borderLeftColor: colors.primary,
+                      },
+                    ],
+                  ]}
+                  onPress={() => {
+                    requestAnimationFrame(() => {
+                      router.push("/(protected)/manageWFH");
+                      setIsLeavesCollaps(true);
+                    });
+                  }}
                 >
-                  Apply WFH
-                </Text>
-              </View>
-              <MaterialIcons
-                name={isWFHCollaps ? "expand-more" : "expand-less"}
-                size={24}
-                color={colors.textTertiary}
-              />
-            </TouchableOpacity>
-            <Collapsible collapsed={isWFHCollaps}>
-              <TouchableOpacity
-                style={[
-                  styles.subItem,
-                  path === "/applyWFH" && [
-                    styles.activeSubItem,
-                    {
-                      backgroundColor: colors.surfaceVariant,
-                      borderLeftColor: colors.primary,
-                    },
-                  ],
-                ]}
-                onPress={() => {
-                  requestAnimationFrame(() => {
-                    router.push("/(protected)/applyWFH");
-                  });
-                }}
-              >
-                <Entypo
-                  name="add-to-list"
-                  size={22}
-                  color={
-                    path === "/applyWFH" ? colors.primary : colors.textTertiary
-                  }
-                />
-                <Text
-                  style={[styles.subItemText, { color: colors.textPrimary }]}
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <MaterialIcons
+                      name="home"
+                      size={24}
+                      color={
+                        props.state.routeNames[props.state.index] ===
+                        "manageWFH"
+                          ? colors.primary
+                          : colors.textTertiary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.drawerItemText,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      Manage WFH
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.sectionHeader, { borderColor: colors.border }]}
+                  onPress={() => {
+                    requestAnimationFrame(() => {
+                      setIsWFHCollaps(!isWFHCollaps);
+                      setIsLeavesCollaps(true);
+                    });
+                  }}
                 >
-                  Apply WFH
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.subItem,
-                  path === "/WorkFromHome" && [
-                    styles.activeSubItem,
-                    {
-                      backgroundColor: colors.surfaceVariant,
-                      borderLeftColor: colors.primary,
-                    },
-                  ],
-                ]}
-                onPress={() => {
-                  requestAnimationFrame(() => {
-                    router.push("/(protected)/WorkFromHome");
-                  });
-                }}
-              >
-                <MaterialIcons
-                  name="view-list"
-                  size={22}
-                  color={
-                    path === "/applyWFH" ? colors.primary : colors.textTertiary
-                  }
-                />
-                <Text
-                  style={[styles.subItemText, { color: colors.textPrimary }]}
-                >
-                  WFH Lists
-                </Text>
-              </TouchableOpacity>
-            </Collapsible>
+                  <View style={styles.sectionHeaderContent}>
+                    <Entypo
+                      name="add-to-list"
+                      size={24}
+                      color={
+                        isWFHCollaps ? colors.textTertiary : colors.primary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.sectionTitle,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      Apply WFH
+                    </Text>
+                  </View>
+                  <MaterialIcons
+                    name={isWFHCollaps ? "expand-more" : "expand-less"}
+                    size={24}
+                    color={colors.textTertiary}
+                  />
+                </TouchableOpacity>
+                <Collapsible collapsed={isWFHCollaps}>
+                  <TouchableOpacity
+                    style={[
+                      styles.subItem,
+                      path === "/applyWFH" && [
+                        styles.activeSubItem,
+                        {
+                          backgroundColor: colors.surfaceVariant,
+                          borderLeftColor: colors.primary,
+                        },
+                      ],
+                    ]}
+                    onPress={() => {
+                      requestAnimationFrame(() => {
+                        router.push("/(protected)/applyWFH");
+                      });
+                    }}
+                  >
+                    <Entypo
+                      name="add-to-list"
+                      size={22}
+                      color={
+                        path === "/applyWFH"
+                          ? colors.primary
+                          : colors.textTertiary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.subItemText,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      Apply WFH
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.subItem,
+                      path === "/WorkFromHome" && [
+                        styles.activeSubItem,
+                        {
+                          backgroundColor: colors.surfaceVariant,
+                          borderLeftColor: colors.primary,
+                        },
+                      ],
+                    ]}
+                    onPress={() => {
+                      requestAnimationFrame(() => {
+                        router.push("/(protected)/WorkFromHome");
+                      });
+                    }}
+                  >
+                    <MaterialIcons
+                      name="view-list"
+                      size={22}
+                      color={
+                        path === "/WorkFromHome"
+                          ? colors.primary
+                          : colors.textTertiary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.subItemText,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      WFH Lists
+                    </Text>
+                  </TouchableOpacity>
+                </Collapsible>
+              </>
+            )}
           </View>
 
-          {/* Theme Toggle Button */}
           <View
             style={[styles.bottomSection, { borderTopColor: colors.border }]}
           >
             <TouchableOpacity
               onPress={handleLogout}
               style={{
-                // width: "100%",
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-start",
@@ -446,127 +581,173 @@ const _layout = () => {
                 size={30}
                 color={colors.textPrimary}
               />
-            
             </TouchableOpacity>
           </View>
         </DrawerContentScrollView>
-
-        {/* <View style={styles.bottomSection}>
-          <View style={styles.divider} />
-        
-        </View> */}
       </View>
     );
   };
+
   return (
-    <Drawer
-      drawerContent={CustomDrawer}
-      screenOptions={{
-        freezeOnBlur: true,
-        swipeEdgeWidth: Dimensions.get("window").width * 0.3,
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.textPrimary,
-        drawerStyle: { backgroundColor: colors.background },
-        drawerActiveTintColor: colors.primary,
-        drawerInactiveTintColor: colors.textTertiary,
-      }}
-      backBehavior="history"
-    >
-      <Drawer.Screen
-        name="index"
-        options={{
-          title: "Home",
+    <>
+      <Drawer
+        drawerContent={CustomDrawer}
+        screenOptions={{
+          freezeOnBlur: true,
+          swipeEdgeWidth: Dimensions.get("window").width * 0.3,
+          headerStyle: { backgroundColor: colors.surface },
+          headerTintColor: colors.textPrimary,
+          drawerStyle: { backgroundColor: colors.background },
           drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          drawerIcon: ({ focused }) => (
-            <MaterialIcons
-              name="home"
-              size={24}
-              color={focused ? colors.primary : colors.textTertiary}
-            />
-          ),
+          drawerInactiveTintColor: colors.textTertiary,
         }}
-      />
-      <Drawer.Screen
-        name="attendance"
-        options={{
-          title: "Attendance",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-          drawerIcon: ({ focused }) => (
-            <FontAwesome6
-              name="calendar-check"
-              size={24}
-              color={focused ? colors.primary : colors.textTertiary}
-            />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="meetingLists"
-        options={{
-          title: "Meeting Lists",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-        }}
-      />
-      <Drawer.Screen
-        name="createMeeting"
-        options={{
-          title: "Create Meeting",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-        }}
-      />
-      <Drawer.Screen
-        name="holidayLists"
-        options={{
-          title: "Lists of Holidays",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-        }}
-      />
-      <Drawer.Screen
-        name="applyLeave"
-        options={{
-          title: "Apply Leave",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-        }}
-      />
-      <Drawer.Screen
-        name="myLeaves"
-        options={{
-          title: "My Leave",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-        }}
-      />
-      <Drawer.Screen
-        name="applyWFH"
-        options={{
-          title: "Apply WFH",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-        }}
-      />
-      <Drawer.Screen
-        name="WorkFromHome"
-        options={{
-          title: "Work From Home",
-          drawerActiveTintColor: colors.primary,
-          drawerItemStyle: { borderRadius: 10 },
-          headerRight: () => <></>,
-        }}
-      />
-    </Drawer>
+        backBehavior="history"
+      >
+        <Drawer.Screen
+          name="index"
+          options={{
+            title: "Home",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            drawerIcon: ({ focused }) => (
+              <MaterialIcons
+                name="home"
+                size={24}
+                color={focused ? colors.primary : colors.textTertiary}
+              />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="attendance"
+          options={{
+            title: "Attendance",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+            drawerIcon: ({ focused }) => (
+              <FontAwesome6
+                name="calendar-check"
+                size={24}
+                color={focused ? colors.primary : colors.textTertiary}
+              />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="meetingLists"
+          options={{
+            title: "Meeting Lists",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="createMeeting"
+          options={{
+            title: "Create Meeting",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="holidayLists"
+          options={{
+            title: "Lists of Holidays",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="applyLeave"
+          options={{
+            title: "Apply Leave",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="myLeaves"
+          options={{
+            title: "My Leave",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="applyWFH"
+          options={{
+            title: "Apply WFH",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="WorkFromHome"
+          options={{
+            title: "Work From Home",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="manageLeaves"
+          options={{
+            title: "Manage Leaves",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+        <Drawer.Screen
+          name="manageWFH"
+          options={{
+            title: "Manage WFH",
+            drawerActiveTintColor: colors.primary,
+            drawerItemStyle: { borderRadius: 10 },
+            headerRight: () => <></>,
+          }}
+        />
+      </Drawer>
+
+      <Modal visible={showSessionTimeout} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.3)",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#fff",
+              padding: 24,
+              borderRadius: 20,
+              alignItems: "center",
+              minWidth: 300,
+            }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8 }}>
+              Session Timeout
+            </Text>
+            <Text style={{ marginVertical: 12, textAlign: "center" }}>
+              Your session has expired. Please log in again.
+            </Text>
+            <TouchableOpacity onPress={handleIsLogout} style={{ marginTop: 8 }}>
+              <Text style={{ color: "blue", fontSize: 16 }}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
 
@@ -646,7 +827,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderTopWidth: 1,
     flexDirection: "row",
-    // alignItems: "center",
     justifyContent: "space-between",
   },
 });

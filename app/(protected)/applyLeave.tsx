@@ -16,7 +16,6 @@ import {
 import { useForm, Controller } from "react-hook-form";
 import { DatePickerModal } from "react-native-paper-dates";
 import { Entypo, FontAwesome } from "@expo/vector-icons";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { Colors } from "@/constants/Colors";
 import { useFocusEffect } from "expo-router";
 import { Badge } from "react-native-paper";
@@ -394,7 +393,6 @@ export default function ApplyLeaveScreen() {
     dateTimeContainer: {
       flexDirection: "row",
       alignItems: "center",
-      // marginBottom: dimensions.padding,
     },
     dateTimeInput: {
       flex: 1,
@@ -496,19 +494,7 @@ export default function ApplyLeaveScreen() {
       fontWeight: "500",
       color: colors.text,
     },
-    dropdownItemIconStyle: {
-      fontSize: dimensions.fontSize.body + 4,
-      marginRight: 8,
-      color: colors.text,
-    },
-    dropdownSearchInputStyle: {
-      fontSize: dimensions.fontSize.body,
-      color: colors.text,
-      padding: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.surface,
-    },
+  
     badgeContainer: {
       height: 40,
       justifyContent: "center",

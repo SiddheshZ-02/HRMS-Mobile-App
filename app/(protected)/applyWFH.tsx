@@ -316,19 +316,7 @@ export default function ApplyWFHScreen() {
       fontWeight: "400",
       color: colors.text,
     },
-    dropdownItemIconStyle: {
-      fontSize: dimensions.fontSize.body + 4,
-      marginRight: 8,
-      color: colors.text,
-    },
-    dropdownSearchInputStyle: {
-      fontSize: dimensions.fontSize.body,
-      color: colors.text,
-      padding: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.surface,
-    },
+   
   });
 
   return (

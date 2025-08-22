@@ -813,12 +813,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-  sortableHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-  },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 12,

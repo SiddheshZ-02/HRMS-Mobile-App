@@ -17,8 +17,10 @@ import {
   View,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
-import { DatePickerModal } from "react-native-paper-dates";
+import { DatePickerModal, id } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
+import { IconButton } from "react-native-paper";
+
 
 const { width } = Dimensions.get("window");
 
@@ -27,24 +29,50 @@ const getColumnWidths = () => {
   const screenWidth = width;
   const isTablet = screenWidth > 768;
   return {
+    employee: isTablet ? 180 : 150,
+    leavecategory: isTablet ? 120 : 100,
+    type: isTablet ? 140 : 100,
     datefrom: isTablet ? 140 : 120,
-    work_type: isTablet ? 120 : 100,
-    reason: isTablet ? Math.max(150, screenWidth * 0.2) : 120,
-    currentdate: isTablet ? 140 : 120,
+    dateto: isTablet ? 140 : 120,
+    leavetype: isTablet ? 140 : 120,
+    reasonforleave: isTablet ? Math.max(150, screenWidth * 0.2) : 120,
+    createddate: isTablet ? 140 : 120,
+    forward: isTablet ? 140 : 120,
+    pending: isTablet ? 140 : 120,
+    action: isTablet ? 140 : 120,
     status: isTablet ? 140 : 120,
   };
 };
 
-interface wfhType {
-  id: number;
-  dateFrom: string | null;
-  reason: string | null;
-  accept_reject_flag: boolean;
+interface leavetype {
+  acceptRejectFlag: boolean;
   active: boolean;
-  currentdate: string | null;
+  carried_forward_leave: string;
   company_id: number;
-  currenttime: string | null;
-  work_type: string | null;
+  currentdate: string;
+  dateFrom: string;
+  dateTo: string;
+  employee: string;
+  employee_id: number;
+  fromDateYear: string;
+  id: number;
+  joining_date: string;
+  leaveType: string;
+  leavecategory: string;
+  leavecategory_id: number;
+  nDays: number;
+  pending_leave_count: [
+    {
+      employee_id: number;
+      leave_category_id: number;
+      leave_category_name: string;
+      l_count: number;
+    }
+  ];
+  probation_month_count: number;
+  reason: string;
+  toDateYear: string;
+  type: "paid";
 }
 
 // Robust date parser: supports ISO (YYYY-MM-DD) and DD-MM-YYYY (or DD/MM/YYYY)
@@ -75,20 +103,23 @@ const parseDateString = (value: string): Date | null => {
   return null;
 };
 
-const WorkFromHome = () => {
+const myLeaves = () => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<keyof wfhType>("currentdate");
+  const [sortColumn, setSortColumn] =
+    useState<keyof leavetype>("leavecategory");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [isWfh, setIsWfh] = useState<wfhType[]>([]);
+  const [isLeave, setIsLeave] = useState<leavetype[]>([]);
   const [loading, setLoading] = useState(true);
   const [columnWidths, setColumnWidths] = useState(getColumnWidths());
+  const [isActive, setIsActive] = useState(false);
+  const [isStatus, setIsStatus] = useState("");
 
   const router = useRouter();
 
@@ -110,10 +141,44 @@ const WorkFromHome = () => {
     }, [])
   );
 
+  const fetchAcceptReject = async (active: string, id: number) => {
+    // console.log(`Fetching ${active} for leave ID: ${id}`);
+
+    try {
+      const response = await fetch(BASE_URL + `/leaves/${active}/${id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || " ",
+        },
+      });
+      if (response.status === 200) {
+        setIsActive(true);
+        await fetchLeave();
+      }
+
+      // Process the data as needed
+    } catch (error) {}
+  };
+
+  const handleAction = (actionType: "accept" | "reject", leaveId: number) => {
+    if (actionType === "accept") {
+      setIsStatus("accept");
+      fetchAcceptReject("accept", leaveId);
+    } else {
+      fetchAcceptReject("reject", leaveId);
+      setIsStatus("reject");
+    }
+  };
+
+    useEffect(()=>{
+      handleAction("accept", 0);
+    },[handleAction])
+
   const fetchLeave = async () => {
     setLoading(true);
     try {
-      const response = await fetch(BASE_URL + `/work_from_home_employee`, {
+      const response = await fetch(BASE_URL + `/leaves`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -121,7 +186,7 @@ const WorkFromHome = () => {
         },
       });
       const data = await response.json();
-      setIsWfh(Array.isArray(data) ? data : []);
+      setIsLeave(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -133,14 +198,17 @@ const WorkFromHome = () => {
     fetchLeave();
   }, []);
 
-  const filteredWfh = useMemo(() => {
-    let result = [...isWfh];
+  const filteredLeaves = useMemo(() => {
+    let result = [...isLeave];
     if (searchText) {
       const lowerSearch = searchText.toLowerCase();
       result = result.filter((item) =>
-        [item.work_type?.toLowerCase(), item.reason?.toLowerCase()].some(
-          (value) => value?.includes(lowerSearch)
-        )
+        [
+          item.leavecategory?.toLowerCase(),
+          item.leaveType?.toLowerCase(),
+          item.reason?.toLowerCase(),
+          item.currentdate?.toLowerCase(),
+        ].some((value) => value?.includes(lowerSearch))
       );
     }
 
@@ -150,9 +218,7 @@ const WorkFromHome = () => {
       const endBound = new Date(endDate);
       endBound.setHours(23, 59, 59, 999);
       result = result.filter((item) => {
-        // const parsedFrom = new Date(item.dateFrom);
-        // return parsedFrom >= startBound && parsedFrom <= endBound;
-        const parsed = parseDateString(item.dateFrom || "");
+        const parsed = parseDateString(item.currentdate);
         if (!parsed) return false;
         const itemDay = new Date(
           parsed.getFullYear(),
@@ -163,28 +229,41 @@ const WorkFromHome = () => {
       });
     }
     return result;
-  }, [isWfh, searchText, startDate, endDate]);
+  }, [isLeave, searchText, startDate, endDate]);
 
-  const sortedWfh = useMemo(() => {
-    return [...filteredWfh].sort((a, b) => {
+  const sortedLeaves = useMemo(() => {
+    return [...filteredLeaves].sort((a, b) => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
 
-      // Handle date fields (dateFrom and currentdate)
-      if (sortColumn === "currentdate") {
-        const dateA = parseDateString(valueA as string) || new Date(0); // Fallback to epoch if invalid
-        const dateB = parseDateString(valueB as string) || new Date(0);
+      if (typeof valueA === "string" && typeof valueB === "string") {
         return sortOrder === "asc"
-          ? dateA.getTime() - dateB.getTime()
-          : dateB.getTime() - dateA.getTime();
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
       }
+      return sortOrder === "asc"
+        ? (valueA as number) - (valueB as number)
+        : (valueB as number) - (valueA as number);
     });
-  }, [filteredWfh, sortColumn, sortOrder]);
+  }, [filteredLeaves, sortColumn, sortOrder]);
 
-  const paginatedWfh = useMemo(() => {
+  const paginatedLeaves = useMemo(() => {
     const from = page * itemsPerPage;
-    return sortedWfh.slice(from, from + itemsPerPage);
-  }, [sortedWfh, page, itemsPerPage]);
+    return sortedLeaves.slice(from, from + itemsPerPage);
+  }, [sortedLeaves, page, itemsPerPage]);
+
+  const handleSort = useCallback(
+    (column: keyof leavetype) => {
+      if (sortColumn === column) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortColumn(column);
+        setSortOrder("asc");
+      }
+      setPage(0);
+    },
+    [sortColumn, sortOrder]
+  );
 
   const handleCloseModal = useCallback(() => {
     setDateModalVisible(false);
@@ -249,47 +328,126 @@ const WorkFromHome = () => {
         style={[
           styles.headerCellContainer,
           {
-            width: columnWidths.datefrom,
+            width: columnWidths.employee,
             borderRightColor: colors.border,
           },
         ]}
       >
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
-          Date
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[
-          styles.headerCellContainer,
-          { width: columnWidths.reason, borderRightColor: colors.border },
-        ]}
-      >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
-          Reason
+          Employee Name
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[
           styles.headerCellContainer,
           {
-            width: columnWidths.currentdate,
+            width: columnWidths.leavecategory,
             borderRightColor: colors.border,
           },
         ]}
+        onPress={() => handleSort("leavecategory")}
       >
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
-          Created Date
+          Leave Category
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.type, borderRightColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Type
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.work_type, borderRightColor: colors.border },
+          { width: columnWidths.datefrom, borderRightColor: colors.border },
+        ]}
+        onPress={() => handleSort("dateFrom")}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Date From
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.dateto, borderRightColor: colors.border },
+        ]}
+        onPress={() => handleSort("dateTo")}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Date To
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.leavetype, borderRightColor: colors.border },
+        ]}
+        onPress={() => handleSort("leaveType")}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Leave Type
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.reasonforleave,
+            borderRightColor: colors.border,
+          },
+        ]}
+        onPress={() => handleSort("reason")}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Reason For Leave
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.createddate, borderRightColor: colors.border },
+        ]}
+        onPress={() => handleSort("currentdate")}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Created Date
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.forward, borderRightColor: colors.border },
         ]}
       >
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
-          WFH mode
+          Carried Forward
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.pending, borderRightColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Pending Leave
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.action, borderRightColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Action
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -305,7 +463,13 @@ const WorkFromHome = () => {
     </View>
   );
 
-  const WfhRow = ({ item, index }: { item: wfhType; index: number }) => {
+  const LeavesRow = ({ item, index }: { item: leavetype; index: number }) => {
+    const status = !item.acceptRejectFlag
+      ? "Pending"
+      : item.acceptRejectFlag && item.active
+      ? "Approved"
+      : "Rejected";
+
     return (
       <View
         style={[
@@ -317,7 +481,7 @@ const WorkFromHome = () => {
           },
         ]}
       >
-        <View style={[styles.cellContainer, { width: columnWidths.datefrom }]}>
+        <View style={[styles.cellContainer, { width: columnWidths.employee }]}>
           <Text
             style={[
               styles.cell,
@@ -325,22 +489,29 @@ const WorkFromHome = () => {
               { color: colors.textPrimary },
             ]}
           >
-            {item.dateFrom}
-          </Text>
-        </View>
-        <View style={[styles.cellContainer, { width: columnWidths.reason }]}>
-          <Text style={[styles.cell, { color: colors.textPrimary }]}>
-            {item.reason}
+            {item.employee}
           </Text>
         </View>
         <View
-          style={[styles.cellContainer, { width: columnWidths.currentdate }]}
+          style={[styles.cellContainer, { width: columnWidths.leavecategory }]}
         >
-          <Text style={[styles.cell, { color: colors.textSecondary }]}>
-            {item.currentdate}
+          <Text
+            style={[
+              styles.cell,
+              styles.nameCell,
+              { color: colors.textPrimary },
+            ]}
+          >
+            {item.leavecategory}
           </Text>
         </View>
-        <View style={[styles.cellContainer, { width: columnWidths.work_type }]}>
+        <View style={[styles.cellContainer, { width: columnWidths.type }]}>
+          <Text style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.type}
+          </Text>
+        </View>
+
+        <View style={[styles.cellContainer, { width: columnWidths.datefrom }]}>
           <Text
             style={[
               styles.cell,
@@ -348,23 +519,142 @@ const WorkFromHome = () => {
               { color: colors.textSecondary },
             ]}
           >
-            {item.work_type}
+            {item.dateFrom}
           </Text>
         </View>
-
+        <View style={[styles.cellContainer, { width: columnWidths.dateto }]}>
+          <Text
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {item.dateTo}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.leavetype }]}>
+          <Text style={[styles.cell, { color: colors.textPrimary }]}>
+            {item.leaveType}
+          </Text>
+        </View>
+        <View
+          style={[styles.cellContainer, { width: columnWidths.reasonforleave }]}
+        >
+          <Text
+            style={[styles.cell, { color: colors.textSecondary }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {item.reason}
+          </Text>
+        </View>
+        <View
+          style={[styles.cellContainer, { width: columnWidths.createddate }]}
+        >
+          <Text
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {item.currentdate}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.forward }]}>
+          <Text
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {item.carried_forward_leave}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.pending }]}>
+          <Text
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {item.pending_leave_count.map((leave) => (
+              <Text key={leave.leave_category_id}>
+                {leave.leave_category_name}: {leave.l_count}
+              </Text>
+            ))}
+          </Text>
+        </View>
+        <View style={[styles.cellContainer, { width: columnWidths.action }]}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 16,
+              padding: 10,
+            }}
+          >
+            <TouchableOpacity onPress={() => handleAction("accept", item.id)}>
+              <IconButton
+                disabled={item.acceptRejectFlag && item.active}
+                icon="check"
+                size={18}
+                iconColor="white"
+                style={
+                  item.acceptRejectFlag && item.active
+                    ? {
+                        borderColor: "#ccc",
+                        backgroundColor: "#f5f5f5",
+                        borderRadius: 6,
+                      }
+                    : {
+                        borderColor: "#28a745",
+                        backgroundColor: "#008000",
+                        borderRadius: 6,
+                      }
+                }
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleAction("reject", item.id)}>
+              <IconButton
+                disabled={item.acceptRejectFlag && !item.active}
+                icon="close"
+                size={18}
+                iconColor="white"
+                style={
+                  item.acceptRejectFlag && !item.active
+                    ? {
+                        borderColor: "#ccc",
+                        backgroundColor: "#f5f5f5",
+                        borderRadius: 6,
+                      }
+                    : {
+                        borderColor: "#28a745",
+                        backgroundColor: "#e74c3c",
+                        borderRadius: 6,
+                      }
+                }
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
         <View style={[styles.cellContainer, { width: columnWidths.status }]}>
           <Text
             style={[
               styles.cell,
               {
                 color:
-                  item.accept_reject_flag === true
+                  status === "Approved"
                     ? colors.success
-                    : colors.error,
+                    : status === "Rejected"
+                    ? colors.error
+                    : colors.textSecondary,
               },
             ]}
           >
-            {item.accept_reject_flag === true ? "Success" : "Pending"}
+            {status}
           </Text>
         </View>
       </View>
@@ -393,7 +683,7 @@ const WorkFromHome = () => {
           />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }]}
-            placeholder="Search by mode  or reason..."
+            placeholder="Search by category, leavetype, or reason..."
             value={searchText}
             onChangeText={(text) => {
               setSearchText(text);
@@ -485,7 +775,7 @@ const WorkFromHome = () => {
 
         <View style={styles.summaryContainer}>
           <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-            Showing {paginatedWfh.length} of {filteredWfh.length} leaves
+            Showing {paginatedLeaves.length} of {filteredLeaves.length} leaves
           </Text>
         </View>
 
@@ -522,7 +812,7 @@ const WorkFromHome = () => {
             >
               <View style={{ width: totalTableWidth }}>
                 <TableHeader />
-                {filteredWfh.length === 0 ? (
+                {filteredLeaves.length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Ionicons
                       name="people-outline"
@@ -532,9 +822,9 @@ const WorkFromHome = () => {
                     <Text
                       style={[styles.emptyTitle, { color: colors.textPrimary }]}
                     >
-                      {isWfh.length === 0
-                        ? "No WFH found"
-                        : "No matching WFH requests"}
+                      {isLeave.length === 0
+                        ? "No leaves found"
+                        : "No matching leaves"}
                     </Text>
                     <Text
                       style={[
@@ -542,18 +832,20 @@ const WorkFromHome = () => {
                         { color: colors.textSecondary },
                       ]}
                     >
-                      {isWfh.length === 0
-                        ? "Your WFH list is empty."
+                      {isLeave.length === 0
+                        ? "Your leave list is empty."
                         : "Try adjusting your search or filter criteria."}
                     </Text>
                   </View>
                 ) : (
                   <LegendList
-                    data={paginatedWfh}
+                    data={paginatedLeaves}
                     renderItem={({ item, index }) => (
-                      <WfhRow item={item} index={index} />
+                      <LeavesRow item={item} index={index} />
                     )}
-                    keyExtractor={(item, idx) => item?.id?.toString() ?? String(item?.id) ?? String(idx)}
+                    keyExtractor={(item, idx) =>
+                      item?.id?.toString() ?? String(item?.id) ?? String(idx)
+                    }
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />
@@ -563,7 +855,7 @@ const WorkFromHome = () => {
           )}
         </View>
 
-        {filteredWfh.length > 0 && (
+        {filteredLeaves.length > 0 && (
           <View
             style={[
               styles.paginationContainer,
@@ -575,8 +867,8 @@ const WorkFromHome = () => {
             >
               {`${page * itemsPerPage + 1}-${Math.min(
                 (page + 1) * itemsPerPage,
-                filteredWfh.length
-              )} of ${filteredWfh.length}`}
+                filteredLeaves.length
+              )} of ${filteredLeaves.length}`}
             </Text>
             <View style={styles.paginationControls}>
               <TouchableOpacity
@@ -602,12 +894,12 @@ const WorkFromHome = () => {
               <TouchableOpacity
                 onPress={() => setPage(page + 1)}
                 disabled={
-                  page >= Math.ceil(filteredWfh.length / itemsPerPage) - 1
+                  page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1
                 }
                 style={[
                   styles.paginationButton,
                   { backgroundColor: colors.surfaceVariant },
-                  page >= Math.ceil(filteredWfh.length / itemsPerPage) - 1 &&
+                  page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1 &&
                     styles.disabledButton,
                 ]}
               >
@@ -615,7 +907,7 @@ const WorkFromHome = () => {
                   name="chevron-forward"
                   size={20}
                   color={
-                    page >= Math.ceil(filteredWfh.length / itemsPerPage) - 1
+                    page >= Math.ceil(filteredLeaves.length / itemsPerPage) - 1
                       ? colors.textTertiary
                       : colors.primary
                   }
@@ -791,7 +1083,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
-    width: "60%",
+    width: "28%",
   },
   emptyTitle: {
     fontSize: 20,
@@ -841,4 +1133,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default WorkFromHome;
+export default myLeaves;

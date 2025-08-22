@@ -106,14 +106,9 @@ const index = () => {
         },
       });
 
-      if (response.status === 401) {
-        setShowSessionTimeout(true);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch meetings");
-      }
+      // if (!response.ok) {
+      //   throw new Error("Failed to fetch meetings");
+      // }
 
       const res = await response.json();
       setData(Array.isArray(res) ? res : []);
@@ -137,14 +132,9 @@ const index = () => {
         },
       });
 
-      if (response.status === 401) {
-        setShowSessionTimeout(true);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch holidays");
-      }
+      // if (!response.ok) {
+      //   throw new Error("Failed to fetch holidays");
+      // }
 
       const res = await response.json();
       setHoliday(Array.isArray(res) ? res : []);
@@ -156,24 +146,11 @@ const index = () => {
     }
   };
 
-  // Handle session timeout and logout
-  useEffect(() => {
-    if (!accessToken) {
-      setShowSessionTimeout(true);
-    }
-  }, [accessToken]);
-
   // Fetch data on component mount
   useEffect(() => {
     fetchMeeting();
     fetchHoliday();
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    setShowSessionTimeout(false);
-    router.replace("/"); // Redirect to login screen
-  };
 
   const toggleDropdown = (id: number) => {
     setExpandedItems((prev) => ({
@@ -323,36 +300,7 @@ const index = () => {
       <StatusBar
         barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
       />
-      <Modal visible={showSessionTimeout} transparent animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "rgba(0,0,0,0.3)",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "#fff",
-              padding: 24,
-              borderRadius: 20,
-              alignItems: "center",
-              minWidth: 300,
-            }}
-          >
-            <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8 }}>
-              Session Timeout
-            </Text>
-            <Text style={{ marginVertical: 12, textAlign: "center" }}>
-              Your session has expired. Please log in again.
-            </Text>
-            <TouchableOpacity onPress={handleLogout} style={{ marginTop: 8 }}>
-              <Text style={{ color: "blue", fontSize: 16 }}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
@@ -388,7 +336,7 @@ const index = () => {
                     { color: colors.textTertiary },
                   ]}
                 >
-                  {(data?.length ?? 0)} meetings scheduled
+                  {data?.length ?? 0} meetings scheduled
                 </Text>
               </View>
             </View>
@@ -520,7 +468,7 @@ const index = () => {
                     { color: colors.textTertiary },
                   ]}
                 >
-                  {(holiday?.length ?? 0)} holidays this month
+                  {holiday?.length ?? 0} holidays this month
                 </Text>
               </View>
             </View>
@@ -629,95 +577,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
-  },
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    marginRight: 12,
-  },
-  welcomeText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 2,
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
-  },
-  statsSection: {
-    marginBottom: 32,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: (width - 60) / 2,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  statContent: {
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  statTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  statSubtitle: {
-    fontSize: 12,
-    fontWeight: "500",
   },
   sectionWrapper: {
     backgroundColor: "#ffffff",

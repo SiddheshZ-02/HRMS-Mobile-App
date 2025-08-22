@@ -44,9 +44,9 @@ export default function RootLayout() {
         await useAuthStore.persist.rehydrate();
         const state = useAuthStore.getState();
 
-        if (state.accessToken) {
-          // setIsAuthenticated(true); // This line is removed
-        }
+        // if (state.accessToken) {
+         
+        // }
 
         // Check SecureStore directly for token
         const storedState = await SecureStore.getItemAsync("auth-storage");

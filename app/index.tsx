@@ -18,7 +18,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from "react-native";
 
 type LoginFormData = {
@@ -44,9 +44,9 @@ const index = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isStoreRehydrated, setIsStoreRehydrated] = useState(false);
-  const { isAuthenticated, login, logout, accessToken,roles } = useAuthStore((state) => state);
- 
-
+  const { isAuthenticated, login, logout, accessToken, roles } = useAuthStore(
+    (state) => state
+  );
 
   const {
     control,
@@ -60,8 +60,6 @@ const index = () => {
       password: "",
     },
   });
-
-
 
   useEffect(() => {
     const rehydrateAndValidate = async () => {
@@ -80,15 +78,11 @@ const index = () => {
     rehydrateAndValidate();
   }, [login]);
 
-
-
   useEffect(() => {
     if (isStoreRehydrated && isAuthenticated) {
       router.replace("/(protected)");
     }
   }, [isAuthenticated, router, isStoreRehydrated]);
-
-
 
   const handleLogin = async (data: LoginFormData) => {
     try {
@@ -110,8 +104,6 @@ const index = () => {
           statusCode: resData.status_code,
           statusMessage: resData.status_message,
         });
-
-      
 
         toast.success(resData.message || "Signed in successfully", {
           position: ToastPosition.BOTTOM,
@@ -180,13 +172,9 @@ const index = () => {
     setData();
   }, []);
 
-
-
-  
-
   if (!isStoreRehydrated) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -194,7 +182,6 @@ const index = () => {
   if (isAuthenticated) {
     return null;
   }
-
 
   return (
     <KeyboardAvoidingView
@@ -373,16 +360,6 @@ const styles = StyleSheet.create({
     width: 200,
     height: 150,
     resizeMode: "contain",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginTop: 20,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginTop: 8,
   },
   formContainer: {
     borderRadius: 16,
