@@ -73,8 +73,9 @@ const createMeeting = () => {
   const clientDropdownController = useRef<any>(null);
   const employeeDropdownController = useRef<any>(null);
 
-  const accessToken = useAuthStore((state) => state.accessToken);
-
+ const { accessToken, setSessionTimeout } = useAuthStore(
+    (state) => state
+  );
   const {
     control,
     handleSubmit,
@@ -191,6 +192,10 @@ const createMeeting = () => {
           },
         }
       );
+         if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
       const res = await response.json();
       const employeesData: any[] = Array.isArray(res) ? res : [];
       setEmployees(employeesData as emplyoeeType[]);
@@ -224,6 +229,10 @@ const createMeeting = () => {
           },
         }
       );
+         if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
       const res = await response.json();
       const clientsData = Array.isArray(res) ? res : [];
       setClients(clientsData);

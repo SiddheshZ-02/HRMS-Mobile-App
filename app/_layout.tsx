@@ -44,9 +44,6 @@ export default function RootLayout() {
         await useAuthStore.persist.rehydrate();
         const state = useAuthStore.getState();
 
-        // if (state.accessToken) {
-         
-        // }
 
         // Check SecureStore directly for token
         const storedState = await SecureStore.getItemAsync("auth-storage");
@@ -104,34 +101,36 @@ export default function RootLayout() {
   }
 
   return (
-    <PaperProvider
-      theme={{
-        ...DefaultTheme,
-        colors: {
-          ...DefaultTheme.colors,
-          onSurface: "black",
-          primary: "black",
-        },
-      }}
-    >
-      <GestureHandlerRootView>
-        <StatusBar animated={true} barStyle={"light-content"} />
-        <Stack>
-          <Stack.Protected guard={!isAuthenticated}>
-            <Stack.Screen 
-              name="index"
-              options={{ headerShown: false, animation: "fade" }}
-            />
-          </Stack.Protected>
-          <Stack.Protected guard={isAuthenticated}>
-            <Stack.Screen
-              name="(protected)"
-              options={{ headerShown: false, animation: "fade" }}
-            />
-          </Stack.Protected>
-        </Stack>
-        <Toasts />
-      </GestureHandlerRootView>
-    </PaperProvider>
+  
+      <PaperProvider
+        theme={{
+          ...DefaultTheme,
+          colors: {
+            ...DefaultTheme.colors,
+            onSurface: "black",
+            primary: "black",
+          },
+        }}
+      >
+        <GestureHandlerRootView>
+          <StatusBar animated={true} barStyle={"light-content"} />
+          <Stack>
+            <Stack.Protected guard={!isAuthenticated}>
+              <Stack.Screen
+                name="index"
+                options={{ headerShown: false, animation: "fade" }}
+              />
+            </Stack.Protected>
+            <Stack.Protected guard={isAuthenticated}>
+              <Stack.Screen
+                name="(protected)"
+                options={{ headerShown: false, animation: "fade" }}
+              />
+            </Stack.Protected>
+          </Stack>
+          <Toasts />
+        </GestureHandlerRootView>
+      </PaperProvider>
+
   );
 }

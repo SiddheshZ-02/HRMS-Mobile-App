@@ -87,13 +87,14 @@ const index = () => {
   const [expandedItems, setExpandedItems] = useState<{
     [key: number]: boolean;
   }>({});
-  const [showSessionTimeout, setShowSessionTimeout] = useState(false);
+ 
 
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const { accessToken, roles, logout } = useAuthStore((state) => state);
-
+   const { accessToken, setSessionTimeout } = useAuthStore(
+    (state) => state
+  );
   // Fetch meeting with proper error handling
   const fetchMeeting = async () => {
     setLoading(true);
@@ -106,9 +107,10 @@ const index = () => {
         },
       });
 
-      // if (!response.ok) {
-      //   throw new Error("Failed to fetch meetings");
-      // }
+      if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
 
       const res = await response.json();
       setData(Array.isArray(res) ? res : []);
@@ -132,10 +134,10 @@ const index = () => {
         },
       });
 
-      // if (!response.ok) {
-      //   throw new Error("Failed to fetch holidays");
-      // }
-
+      if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
       const res = await response.json();
       setHoliday(Array.isArray(res) ? res : []);
     } catch (error) {

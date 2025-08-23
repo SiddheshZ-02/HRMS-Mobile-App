@@ -113,7 +113,7 @@ export default function ApplyLeaveScreen() {
     null
   );
 
-  const accessToken = useAuthStore((state) => state.accessToken);
+  const { accessToken, setSessionTimeout } = useAuthStore((state) => state);
 
   const showToast = (message: string) => {
     if (Platform.OS === "android") {
@@ -132,6 +132,11 @@ export default function ApplyLeaveScreen() {
           accesstoken: accessToken || "",
         },
       });
+
+      if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
       const data = await response.json();
       setLeaves(Array.isArray(data) ? data : []);
       if (!response.ok) {
@@ -285,6 +290,8 @@ export default function ApplyLeaveScreen() {
     }
   };
 
+
+  
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -486,15 +493,15 @@ export default function ApplyLeaveScreen() {
       paddingHorizontal: 12,
       justifyContent: "center",
       alignItems: "center",
-      paddingVertical: 8,
+      paddingVertical: 15,
     },
     dropdownItemTxtStyle: {
       flex: 1,
       fontSize: dimensions.fontSize.body,
-      fontWeight: "500",
+      fontWeight: "400",
       color: colors.text,
     },
-  
+
     badgeContainer: {
       height: 40,
       justifyContent: "center",

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -88,11 +89,13 @@ const parseDateString = (value: string): Date | null => {
 
 const MeetingList = () => {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = Colors[colorScheme ?? "light"];
   const [searchText, setSearchText] = useState("");
   const [itemsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [sortColumn, setSortColumn] = useState<keyof MeetingType>("expected_start_date");
+  const [sortColumn, setSortColumn] = useState<keyof MeetingType>(
+    "expected_start_date"
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -106,23 +109,23 @@ const MeetingList = () => {
   );
   const router = useRouter();
 
-     const accessToken = useAuthStore((state) => state.accessToken);
-
+  const { accessToken, setSessionTimeout } = useAuthStore((state) => state);
 
   const fetchMeeting = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
+      const response = await fetch(BASE_URL + `/meeting`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || "",
+        },
+      });
 
-        BASE_URL + `/meeting`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            accesstoken: accessToken || "",
-          },
-        }
-      );
+      if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
       const res = await response.json();
       setMeetingList(Array.isArray(res) ? res : []);
     } catch (error) {
@@ -183,7 +186,11 @@ const MeetingList = () => {
       result = result.filter((item) => {
         const parsed = parseDateString(item.expected_start_date);
         if (!parsed) return false;
-        const itemDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+        const itemDay = new Date(
+          parsed.getFullYear(),
+          parsed.getMonth(),
+          parsed.getDate()
+        );
         return itemDay >= startBound && itemDay <= endBound;
       });
     }
@@ -196,7 +203,6 @@ const MeetingList = () => {
     return [...filteredMeetings].sort((a, b) => {
       let valueA = a[sortColumn];
       let valueB = b[sortColumn];
-
 
       // if (sortColumn === "expected_start_date") {
       //   const dateA = parseDateString(valueA as string) || new Date(0); // Fallback to epoch if invalid
@@ -220,7 +226,6 @@ const MeetingList = () => {
       return sortOrder === "asc"
         ? (valueA as number) - (valueB as number)
         : (valueB as number) - (valueA as number);
-
     });
   }, [filteredMeetings, sortColumn, sortOrder]);
 
@@ -299,39 +304,118 @@ const MeetingList = () => {
   };
 
   const TableHeader = () => (
-    <View style={[styles.tableHeader, { backgroundColor: colors.primary + '20' }]}>
-      {/* <View style={[styles.headerCellContainer, { width: columnWidths.edit, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Edit</Text>
-      </View> */}
-      <View style={[styles.headerCellContainer, { width: columnWidths.title, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Title</Text>
+    <View
+      style={[styles.tableHeader, { backgroundColor: colors.primary + "20" }]}
+    >
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.title, borderRightColor: colors.textPrimary },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Title
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.client, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Client</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.client, borderRightColor: colors.textPrimary },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Client
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.url, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>URL</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.url, borderRightColor: colors.textPrimary },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          URL
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.startdate, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}> Start Date </Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.startdate,
+            borderRightColor: colors.textPrimary,
+          },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          {" "}
+          Start Date{" "}
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.starttime, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Start Time</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.starttime,
+            borderRightColor: colors.textPrimary,
+          },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Start Time
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.enddate, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>End Date</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.enddate, borderRightColor: colors.textPrimary },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          End Date
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.endtime, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>End Time</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.endtime, borderRightColor: colors.textPrimary },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          End Time
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.recording, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Recording</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.recording,
+            borderRightColor: colors.textPrimary,
+          },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Recording
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.description, borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Description</Text>
+      <View
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.description,
+            borderRightColor: colors.textPrimary,
+          },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Description
+        </Text>
       </View>
-      <View style={[styles.headerCellContainer, { width: columnWidths.employee }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Emplyoee</Text>
+      <View
+        style={[styles.headerCellContainer, { width: columnWidths.employee }]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Emplyoee
+        </Text>
       </View>
     </View>
   );
@@ -344,21 +428,29 @@ const MeetingList = () => {
     index: number;
   }) => {
     return (
-      <View style={[
-        styles.tableRow, 
-        { 
-          backgroundColor: index % 2 === 0 ? colors.surface : colors.surfaceVariant,
-          borderBottomColor: colors.border 
-        }
-      ]}>
-       
+      <View
+        style={[
+          styles.tableRow,
+          {
+            backgroundColor:
+              index % 2 === 0 ? colors.surface : colors.surfaceVariant,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <View style={[styles.cellContainer, { width: columnWidths.title }]}>
-          <Text selectable style={[styles.cell, styles.nameCell, { color: colors.primary }]}>
+          <Text
+            selectable
+            style={[styles.cell, styles.nameCell, { color: colors.primary }]}
+          >
             {item.title}
           </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.client }]}>
-          <Text selectable style={[styles.cell, styles.cell, { color: colors.textPrimary }]}>
+          <Text
+            selectable
+            style={[styles.cell, styles.cell, { color: colors.textPrimary }]}
+          >
             {item.client_name}
           </Text>
         </View>
@@ -378,43 +470,94 @@ const MeetingList = () => {
           </Text>
         </TouchableOpacity>
         <View style={[styles.cellContainer, { width: columnWidths.startdate }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
+          <Text
+            selectable
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             {item.expected_start_date}
           </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.starttime }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
+          <Text
+            selectable
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             {item.expected_start_date}
           </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.enddate }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
+          <Text
+            selectable
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             {item.expected_end_date}
           </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.endtime }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
+          <Text
+            selectable
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             {item.expected_end_date}
           </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.recording }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
+          <Text
+            selectable
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             {item.recording_url || "N/A"}
           </Text>
         </View>
-        <View style={[styles.cellContainer, { width: columnWidths.description }]}>
-          <Text selectable style={[styles.cell, styles.dateCell, { color: colors.textSecondary }]}>
+        <View
+          style={[styles.cellContainer, { width: columnWidths.description }]}
+        >
+          <Text
+            selectable
+            style={[
+              styles.cell,
+              styles.dateCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             {item.description}
           </Text>
         </View>
 
         {item.employee_id && item.employee_id.length > 0 && (
-          <View style={[styles.cellContainer, { width: columnWidths.employee }]}>
+          <View
+            style={[styles.cellContainer, { width: columnWidths.employee }]}
+          >
             {(expandedRows[item.meet_id]
               ? item.employee_id
               : item.employee_id.slice(0, 3)
             ).map((emp, idx) => (
-              <Text key={idx} numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textPrimary }}>
+              <Text
+                key={idx}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ color: colors.textPrimary }}
+              >
                 {`${emp.firstname} ${emp.lastname}`}
               </Text>
             ))}
@@ -449,7 +592,12 @@ const MeetingList = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <Ionicons
             name="search"
             size={20}
@@ -468,7 +616,11 @@ const MeetingList = () => {
           />
           {searchText.length > 0 && (
             <TouchableOpacity onPress={() => setSearchText("")}>
-              <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color={colors.textTertiary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -476,25 +628,47 @@ const MeetingList = () => {
         <View style={styles.filtersContainer}>
           <View style={styles.filterLeft}>
             <TouchableOpacity
-              style={[styles.filterButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[
+                styles.filterButton,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               onPress={() => setDateModalVisible(true)}
             >
-              <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-              <Text style={[styles.filterButtonText, { color: colors.textPrimary }]}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={colors.primary}
+              />
+              <Text
+                style={[styles.filterButtonText, { color: colors.textPrimary }]}
+              >
                 {startDate && endDate ? "Date Filtered" : "Filter by Date"}
               </Text>
             </TouchableOpacity>
             {(startDate || endDate) && (
               <TouchableOpacity
-                style={[styles.clearFilterButton, { backgroundColor: colors.error + '15', borderColor: colors.error + '30' }]}
+                style={[
+                  styles.clearFilterButton,
+                  {
+                    backgroundColor: colors.error + "15",
+                    borderColor: colors.error + "30",
+                  },
+                ]}
                 onPress={handleResetDateRange}
               >
                 <Ionicons name="close" size={14} color={colors.error} />
-                <Text style={[styles.clearFilterText, { color: colors.error }]}>Clear</Text>
+                <Text style={[styles.clearFilterText, { color: colors.error }]}>
+                  Clear
+                </Text>
               </TouchableOpacity>
             )}
           </View>
-          <View style={[styles.sortContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.sortContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Dropdown
               data={[
                 { label: "↑ Ascending", value: "asc" },
@@ -512,9 +686,12 @@ const MeetingList = () => {
               placeholderStyle={{ color: colors.textTertiary }}
               selectedTextStyle={{ color: colors.textPrimary }}
               itemTextStyle={{ color: colors.textPrimary }}
-              containerStyle={[styles.pickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              containerStyle={[
+                styles.pickerContainer,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
               itemContainerStyle={{ backgroundColor: colors.surface }}
-              activeColor={colors.primary + '20'}
+              activeColor={colors.primary + "20"}
             />
           </View>
         </View>
@@ -526,11 +703,20 @@ const MeetingList = () => {
           </Text>
         </View>
 
-        <View style={[styles.tableContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.tableContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading meetings...</Text>
+              <Text
+                style={[styles.loadingText, { color: colors.textSecondary }]}
+              >
+                Loading meetings...
+              </Text>
             </View>
           ) : (
             <ScrollView
@@ -552,13 +738,24 @@ const MeetingList = () => {
                 <TableHeader />
                 {filteredMeetings.length === 0 ? (
                   <View style={styles.emptyContainer}>
-                    <Ionicons name="people-outline" size={64} color={colors.textTertiary} />
-                    <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+                    <Ionicons
+                      name="people-outline"
+                      size={64}
+                      color={colors.textTertiary}
+                    />
+                    <Text
+                      style={[styles.emptyTitle, { color: colors.textPrimary }]}
+                    >
                       {meetingList.length === 0
                         ? "No meetings found"
                         : "No matching meetings"}
                     </Text>
-                    <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                    <Text
+                      style={[
+                        styles.emptySubtitle,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
                       {meetingList.length === 0
                         ? "Your meeting list is empty."
                         : "Try adjusting your search or filter criteria."}
@@ -570,7 +767,11 @@ const MeetingList = () => {
                     renderItem={({ item, index }) => (
                       <MeetingListRow item={item} index={index} />
                     )}
-                    keyExtractor={(item, idx) => item?.meet_id?.toString() ?? String(item?.meet_id) ?? String(idx)}
+                    keyExtractor={(item, idx) =>
+                      item?.meet_id?.toString() ??
+                      String(item?.meet_id) ??
+                      String(idx)
+                    }
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />
@@ -581,8 +782,15 @@ const MeetingList = () => {
         </View>
 
         {filteredMeetings.length > 0 && (
-          <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.paginationInfo, { color: colors.textSecondary }]}>
+          <View
+            style={[
+              styles.paginationContainer,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text
+              style={[styles.paginationInfo, { color: colors.textSecondary }]}
+            >
               {`${page * itemsPerPage + 1}-${Math.min(
                 (page + 1) * itemsPerPage,
                 filteredMeetings.length
@@ -604,7 +812,11 @@ const MeetingList = () => {
                   color={page === 0 ? colors.textTertiary : colors.primary}
                 />
               </TouchableOpacity>
-              <Text style={[styles.pageIndicator, { color: colors.textPrimary }]}>{page + 1}</Text>
+              <Text
+                style={[styles.pageIndicator, { color: colors.textPrimary }]}
+              >
+                {page + 1}
+              </Text>
               <TouchableOpacity
                 onPress={() => setPage(page + 1)}
                 disabled={
@@ -861,4 +1073,3 @@ const styles = StyleSheet.create({
 });
 
 export default MeetingList;
-

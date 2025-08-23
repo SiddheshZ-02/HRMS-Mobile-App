@@ -15,8 +15,10 @@ export interface AuthState {
   statusCode: number | null;
   statusMessage: string | null;
   isAuthenticated: boolean;
+  showSessionTimeout: boolean;
   login: (data: Partial<AuthState>) => void;
   logout: () => Promise<void>;
+  setSessionTimeout: (show: boolean) => void;
 }
 
 const secureStorage = {
@@ -47,6 +49,7 @@ const useAuthStore = create<AuthState>()(
       statusCode: null,
       statusMessage: null,
       isAuthenticated: false,
+      showSessionTimeout: false,
 
       login: (data) =>
         set((state) => ({
@@ -83,14 +86,20 @@ const useAuthStore = create<AuthState>()(
             statusCode: null,
             statusMessage: null,
             isAuthenticated: false,
+            showSessionTimeout: false,
           });
-            
           console.log("Logout successful, SecureStore cleared");
         } catch (error) {
           console.error("Failed to clear SecureStore on logout:", error);
-          throw error; // Rethrow to handle in UI
+          throw error;
         }
       },
+
+      setSessionTimeout: (show) =>
+        set((state) => ({
+          ...state,
+          showSessionTimeout: show,
+        })),
     }),
     {
       name: "auth-storage",

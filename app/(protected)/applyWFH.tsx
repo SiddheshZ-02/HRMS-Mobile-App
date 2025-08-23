@@ -9,6 +9,9 @@ import {
   Dimensions,
   useColorScheme,
   RefreshControl,
+  Platform,
+  ToastAndroid,
+  Alert,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { DatePickerModal } from "react-native-paper-dates";
@@ -17,6 +20,7 @@ import { Colors } from "@/constants/Colors";
 import SelectDropdown from "react-native-select-dropdown";
 import { BASE_URL } from "@/constants/Config";
 import useAuthStore from "@/store/AuthStore";
+import axios from "axios";
 
 const { width, height } = Dimensions.get("window");
 const isTablet = width > 768;
@@ -66,7 +70,15 @@ export default function ApplyWFHScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const dropdownRef = useRef<any>(null);
 
-  const accessToken = useAuthStore((state) => state.accessToken);
+  const { accessToken, setSessionTimeout } = useAuthStore((state) => state);
+
+  const showToast = (message: string) => {
+    if (Platform.OS === "android") {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      Alert.alert("Notification", message);
+    }
+  };
 
   // WFH modes with icons
   const wfhModes: SelectType[] = [
@@ -134,30 +146,76 @@ export default function ApplyWFHScreen() {
       if (dropdownRef.current?.reset) {
         dropdownRef.current.reset();
       }
+      showToast("WFH application submitted");
     },
     [reset, formatDate]
   );
 
-  const handleApplyWFH = async (data: any) => {
-    try {
-      const res = await fetch(`${BASE_URL}/work_from_home`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          accesstoken: accessToken || "",
-        },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
+  // const handleApplyWFH = async (data: any) => {
+  //   try {
+  //     const res = await fetch(`${BASE_URL}/work_from_home`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         accesstoken: accessToken || "",
+  //       },
+  //       body: JSON.stringify(data),
+  //     });
 
-      if (!res.ok) {
-        throw new Error(result.message || "Failed to apply WFH");
-      }
-    } catch (error) {
+  //     if (res.status === 401) {
+  //       setSessionTimeout(true);
+  //       return;
+  //     }
+
+  //     const result = await res.json();
+
+  //     if (!res.ok) {
+  //       throw new Error(result.message || "Failed to apply WFH");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error applying WFH:", error);
+  //     throw error;
+  //   }
+  // };
+
+
+
+const handleApplyWFH = async (data: any) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/work_from_home`, data, {
+      headers: {
+        "Content-Type": "application/json",
+        accesstoken: accessToken || "",
+      },
+    });
+
+    if (response.status === 401) {
+      setSessionTimeout(true);
+      return;
+    }
+
+    // Axios automatically parses JSON response
+    const result = response.data;
+
+    if (response.status !== 200) {
+      throw new Error(result.message || "Failed to apply WFH");
+    }
+
+    return result; // Optional: return the response data if needed
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      // Handle Axios-specific errors
+      console.error("Axios error applying WFH:", error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || "Failed to apply WFH");
+    } else {
+      // Handle non-Axios errors
       console.error("Error applying WFH:", error);
       throw error;
     }
-  };
+  }
+};
+
+
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -308,7 +366,7 @@ export default function ApplyWFHScreen() {
       paddingHorizontal: 12,
       justifyContent: "center",
       alignItems: "center",
-      paddingVertical: 8,
+      paddingVertical: 15,
     },
     dropdownItemTxtStyle: {
       flex: 1,
@@ -316,7 +374,6 @@ export default function ApplyWFHScreen() {
       fontWeight: "400",
       color: colors.text,
     },
-   
   });
 
   return (
@@ -401,7 +458,7 @@ export default function ApplyWFHScreen() {
                     <Text style={styles.dropdownButtonTxtStyle}>
                       {selectedItem?.title || "Select WFH mode"}
                     </Text>
-                    {/* <Entypo name="chevron-small-up" size={24} color="black" /> */}
+
                     <Entypo
                       name={isOpen ? "chevron-small-up" : "chevron-small-down"}
                       style={styles.dropdownButtonArrowStyle}

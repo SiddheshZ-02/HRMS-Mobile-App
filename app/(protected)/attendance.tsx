@@ -5,15 +5,15 @@ import { LegendList } from "@legendapp/list";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { RefreshControl } from "react-native-gesture-handler";
@@ -105,12 +105,11 @@ const Attendance = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [data, setData] = useState<AttendanceType[]>([]);
-  console.log(data);
 
-   const accessToken = useAuthStore((state) => state.accessToken);
+  // console.log(data);
 
- 
-  
+  const { accessToken, setSessionTimeout } = useAuthStore((state) => state);
+
   const [loading, setLoading] = useState(true);
   const [columnWidths, setColumnWidths] = useState(getColumnWidths());
 
@@ -129,9 +128,8 @@ const Attendance = () => {
       }
 
       const response = await fetch(
-
-        BASE_URL + `/attendance?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
-        // `https://hr.actifyzone.com/HR-API/HR/Portal/attendance?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
+        BASE_URL +
+          `/attendance?startDate=${formattedStartDate}&endDate=${formattedEndDate}`,
         {
           method: "GET",
           headers: {
@@ -140,6 +138,12 @@ const Attendance = () => {
           },
         }
       );
+
+      if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
+
       const res = await response.json();
       setData(Array.isArray(res) ? res : []);
     } catch (error) {
@@ -219,7 +223,7 @@ const Attendance = () => {
       let valueB = b[sortColumn];
 
       // if (
-      //   sortColumn === "currentdate" 
+      //   sortColumn === "currentdate"
       //   // sortColumn === "lastname" ||
       //   // sortColumn === "email" ||
       //   // sortColumn === "work_mode"
@@ -333,42 +337,80 @@ const Attendance = () => {
   };
 
   const TableHeader = () => (
-    <View style={[styles.tableHeader, { backgroundColor: colors.primary + "20", }]}>
-      <View style={[styles.headerCellContainer, { width: columnWidths.date ,borderRightColor: colors.textPrimary }]}>
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>Date</Text>
-      </View>
+    <View
+      style={[styles.tableHeader, { backgroundColor: colors.primary + "20" }]}
+    >
       <View
-        style={[styles.headerCellContainer, { width: columnWidths.intime, borderRightColor: colors.textPrimary }]}
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.date, borderRightColor: colors.textPrimary },
+        ]}
       >
-        <Text  style={[styles.headerCell, { color: colors.textPrimary }]}>In time</Text>
-      </View>
-      <View
-        style={[styles.headerCellContainer, { width: columnWidths.outtime,borderRightColor: colors.textPrimary }]}
-      >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]} >Out Time</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Date
+        </Text>
       </View>
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.workinghours,borderRightColor: colors.textPrimary  },
+          { width: columnWidths.intime, borderRightColor: colors.textPrimary },
         ]}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]} >Working Hours</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          In time
+        </Text>
+      </View>
+      <View
+        style={[
+          styles.headerCellContainer,
+          { width: columnWidths.outtime, borderRightColor: colors.textPrimary },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Out Time
+        </Text>
+      </View>
+      <View
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.workinghours,
+            borderRightColor: colors.textPrimary,
+          },
+        ]}
+      >
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Working Hours
+        </Text>
       </View>
 
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.actualworkinghours ,borderRightColor: colors.textPrimary },
+          {
+            width: columnWidths.actualworkinghours,
+            borderRightColor: colors.textPrimary,
+          },
         ]}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]} > Actual Working Hours </Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          {" "}
+          Actual Working Hours{" "}
+        </Text>
       </View>
 
       <View
-        style={[styles.headerCellContainer, { width: columnWidths.workmode,borderRightColor: colors.textPrimary  }]}
+        style={[
+          styles.headerCellContainer,
+          {
+            width: columnWidths.workmode,
+            borderRightColor: colors.textPrimary,
+          },
+        ]}
       >
-        <Text style={[styles.headerCell, { color: colors.textPrimary }]} >Work Mode</Text>
+        <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
+          Work Mode
+        </Text>
       </View>
     </View>
   );
@@ -614,7 +656,9 @@ const Attendance = () => {
                     renderItem={({ item, index }) => (
                       <AttendanceRow item={item} index={index} />
                     )}
-                    keyExtractor={(item, idx) => item?.id?.toString() ?? String(item?.id) ?? String(idx)}
+                    keyExtractor={(item, idx) =>
+                      item?.id?.toString() ?? String(item?.id) ?? String(idx)
+                    }
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />
@@ -845,7 +889,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
-    width:"50%"
+    width: "50%",
   },
   emptyTitle: {
     fontSize: 20,

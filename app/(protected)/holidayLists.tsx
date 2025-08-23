@@ -13,7 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   useColorScheme,
-  View
+  View,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { RefreshControl } from "react-native-gesture-handler";
@@ -30,7 +30,6 @@ const getColumnWidths = () => {
     // edit: isTablet ? 100 : 80,
     day: isTablet ? 230 : 230,
     date: isTablet ? 150 : 150,
-   
   };
 };
 
@@ -83,26 +82,27 @@ const holidayLists = () => {
   // console.log(holidays);
 
   const [loading, setLoading] = useState(true);
-     const accessToken = useAuthStore((state) => state.accessToken);
-     const [columnWidths, setColumnWidths] = useState(getColumnWidths());
+  const { accessToken, setSessionTimeout } = useAuthStore((state) => state);
+  const [columnWidths, setColumnWidths] = useState(getColumnWidths());
 
-  
   const router = useRouter();
 
   const fetchHolidays = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
+      const response = await fetch(BASE_URL + `/holidays`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          accesstoken: accessToken || "",
+        },
+      });
 
-        BASE_URL + `/holidays`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            accesstoken: accessToken || "",
-          },
-        }
-      );
+      if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
+
       const res = await response.json();
       setHolidays(Array.isArray(res) ? res : []);
     } catch (error) {
@@ -153,7 +153,11 @@ const holidayLists = () => {
       result = result.filter((item) => {
         const parsed = parseDateString(item.dates);
         if (!parsed) return false;
-        const itemDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+        const itemDay = new Date(
+          parsed.getFullYear(),
+          parsed.getMonth(),
+          parsed.getDate()
+        );
         return itemDay >= startBound && itemDay <= endBound;
       });
     }
@@ -170,7 +174,7 @@ const holidayLists = () => {
   //     // Handle dates column
   //   if (sortColumn === "dates") {
   //     // Convert to Date objects safely
-  //     const dateA = valueA ? new Date(valueA) : new Date(0); 
+  //     const dateA = valueA ? new Date(valueA) : new Date(0);
   //     const dateB = valueB ? new Date(valueB) : new Date(0);
 
   //     return sortOrder === "desc"
@@ -190,35 +194,33 @@ const holidayLists = () => {
   //   });
   // }, [filteredHolidays, sortColumn, sortOrder]);
 
+  const sortedHolidays = useMemo(() => {
+    return [...filteredHolidays].sort((a, b) => {
+      let valueA = a[sortColumn];
+      let valueB = b[sortColumn];
 
-const sortedHolidays = useMemo(() => {
-  return [...filteredHolidays].sort((a, b) => {
-    let valueA = a[sortColumn];
-    let valueB = b[sortColumn];
+      // Handle dates column
+      if (sortColumn === "dates") {
+        const dateA = parseDateString(valueA as string) || new Date(0); // Fallback to epoch if invalid
+        const dateB = parseDateString(valueB as string) || new Date(0);
+        return sortOrder === "asc"
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      }
 
-    // Handle dates column
-    if (sortColumn === "dates") {
-      const dateA = parseDateString(valueA as string) || new Date(0); // Fallback to epoch if invalid
-      const dateB = parseDateString(valueB as string) || new Date(0);
+      // Handle string fields (e.g., days)
+      if (typeof valueA === "string" && typeof valueB === "string") {
+        return sortOrder === "asc"
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      }
+
+      // Handle numeric fields (e.g., id)
       return sortOrder === "asc"
-        ? dateA.getTime() - dateB.getTime()
-        : dateB.getTime() - dateA.getTime();
-    }
-
-    // Handle string fields (e.g., days)
-    if (typeof valueA === "string" && typeof valueB === "string") {
-      return sortOrder === "asc"
-        ? valueA.localeCompare(valueB)
-        : valueB.localeCompare(valueA);
-    }
-
-    // Handle numeric fields (e.g., id)
-    return sortOrder === "asc"
-      ? (valueA as number) - (valueB as number)
-      : (valueB as number) - (valueA as number);
-  });
-}, [filteredHolidays, sortColumn, sortOrder]);
-
+        ? (valueA as number) - (valueB as number)
+        : (valueB as number) - (valueA as number);
+    });
+  }, [filteredHolidays, sortColumn, sortOrder]);
 
   // Pagination
   const paginatedHolidays = useMemo(() => {
@@ -296,7 +298,7 @@ const sortedHolidays = useMemo(() => {
 
   const TableHeader = () => (
     <View
-      style={[styles.tableHeader, { backgroundColor: colors.primary + "20", }]}
+      style={[styles.tableHeader, { backgroundColor: colors.primary + "20" }]}
     >
       {/* <View
         style={[
@@ -311,19 +313,14 @@ const sortedHolidays = useMemo(() => {
       <View
         style={[
           styles.headerCellContainer,
-          { width: columnWidths.date,borderRightColor: colors.textPrimary},
+          { width: columnWidths.date, borderRightColor: colors.textPrimary },
         ]}
       >
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
           Date
         </Text>
       </View>
-      <View
-        style={[
-          styles.headerCellContainer,
-          { width: columnWidths.day},
-        ]}
-      >
+      <View style={[styles.headerCellContainer, { width: columnWidths.day }]}>
         <Text style={[styles.headerCell, { color: colors.textPrimary }]}>
           Holiday Name
         </Text>
@@ -348,7 +345,8 @@ const sortedHolidays = useMemo(() => {
           {
             backgroundColor:
               index % 2 === 0 ? colors.surface : colors.surfaceVariant,
-            borderBottomColor: colors.border, borderRightColor:colors.textPrimary
+            borderBottomColor: colors.border,
+            borderRightColor: colors.textPrimary,
           },
         ]}
       >
@@ -494,7 +492,8 @@ const sortedHolidays = useMemo(() => {
 
         <View style={styles.summaryContainer}>
           <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-            Showing {paginatedHolidays.length} of {filteredHolidays.length} Holidays
+            Showing {paginatedHolidays.length} of {filteredHolidays.length}{" "}
+            Holidays
           </Text>
         </View>
 
@@ -562,7 +561,9 @@ const sortedHolidays = useMemo(() => {
                     renderItem={({ item, index }) => (
                       <HolidayListRow item={item} index={index} />
                     )}
-                    keyExtractor={(item, idx) => item?.id?.toString() ?? String(item?.id) ?? String(idx)}
+                    keyExtractor={(item, idx) =>
+                      item?.id?.toString() ?? String(item?.id) ?? String(idx)
+                    }
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />
@@ -643,8 +644,6 @@ const sortedHolidays = useMemo(() => {
           initialStartDate={startDate}
           initialEndDate={endDate}
         />
-
-      
       </View>
     </View>
   );
@@ -754,7 +753,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 16,
     borderBottomWidth: 1,
-
   },
   headerCellContainer: {
     justifyContent: "center",
@@ -786,8 +784,7 @@ const styles = StyleSheet.create({
   nameCell: {
     fontWeight: "600",
   },
- 
- 
+
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -804,8 +801,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
-
-
   },
   emptyTitle: {
     fontSize: 20,

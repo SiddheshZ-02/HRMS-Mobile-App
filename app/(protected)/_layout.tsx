@@ -29,6 +29,7 @@ import { Modal } from "react-native";
 import useAuthStore from "@/store/AuthStore";
 import { en, registerTranslation } from "react-native-paper-dates";
 import { BASE_URL } from "@/constants/Config";
+import { reload } from "expo-router/build/global-state/routing";
 
 registerTranslation("en", en);
 
@@ -41,9 +42,9 @@ const _layout = () => {
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState(systemColorScheme ?? "light");
   const colors = Colors[theme];
-  const [showSessionTimeout, setShowSessionTimeout] = useState(false);
 
-  const { accessToken, roles, logout } = useAuthStore((state) => state);
+  const { accessToken, roles, logout, showSessionTimeout, setSessionTimeout } =
+    useAuthStore((state) => state);
 
   useEffect(() => {
     const loadTheme = async () => {
@@ -92,21 +93,26 @@ const _layout = () => {
         });
 
         if (response.status === 401) {
-          setShowSessionTimeout(true);
+          setSessionTimeout(true);
           return;
         }
-      } catch (error) {}
+      } catch (error) {
+        console.error("Failed to fetch roles:", error);
+      }
     };
 
     fetchRole();
   }, [path]);
 
-  const handleIsLogout = () => {
-    logout();
-    setShowSessionTimeout(false);
-    router.replace("/"); // Redirect to login screen
+  const handleIsLogout = async () => {
+    try {
+      await logout();
+      setSessionTimeout(false);
+      router.replace("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
-
   const CustomDrawer = (props: DrawerContentComponentProps) => {
     return (
       <View
@@ -601,7 +607,7 @@ const _layout = () => {
           drawerActiveTintColor: colors.primary,
           drawerInactiveTintColor: colors.textTertiary,
         }}
-        backBehavior="history"
+        backBehavior="initialRoute"
       >
         <Drawer.Screen
           name="index"

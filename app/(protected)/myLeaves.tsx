@@ -115,8 +115,9 @@ const myLeaves = () => {
 
   const router = useRouter();
 
-  const accessToken = useAuthStore((state) => state.accessToken);
-
+const { accessToken, setSessionTimeout } = useAuthStore(
+    (state) => state
+  );
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", () => {
       setColumnWidths(getColumnWidths());
@@ -143,6 +144,10 @@ const myLeaves = () => {
           accesstoken: accessToken || " ",
         },
       });
+        if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
       const data = await response.json();
       setIsLeave(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -383,6 +388,15 @@ const myLeaves = () => {
   );
 
   const LeavesRow = ({ item, index }: { item: leavetype; index: number }) => {
+
+   const status = !item.acceptRejectFlag
+      ? "Pending"
+      : item.acceptRejectFlag && item.active
+      ? "Approved"
+      : "Rejected";
+
+
+
     return (
       <View
         style={[
@@ -471,13 +485,15 @@ const myLeaves = () => {
               styles.cell,
               {
                 color:
-                  item.active === false
+                  status === "Approved"
+                    ? colors.success
+                    : status === "Rejected"
                     ? colors.error
-                    : colors.success,
+                    : colors.accent,
               },
             ]}
           >
-            {item.carried_forward_leave === "no" ? "Pending" : "Success"}
+            {status}
           </Text>
         </View>
       </View>

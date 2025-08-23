@@ -6,12 +6,15 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  ToastAndroid,
   TouchableOpacity,
   useColorScheme,
   View,
@@ -20,7 +23,6 @@ import { Dropdown } from "react-native-element-dropdown";
 import { DatePickerModal, id } from "react-native-paper-dates";
 import { Colors } from "../../constants/Colors";
 import { IconButton } from "react-native-paper";
-
 
 const { width } = Dimensions.get("window");
 
@@ -61,14 +63,15 @@ interface leavetype {
   leavecategory: string;
   leavecategory_id: number;
   nDays: number;
-  pending_leave_count: [
-    {
-      employee_id: number;
-      leave_category_id: number;
-      leave_category_name: string;
-      l_count: number;
-    }
-  ];
+  pending_leave_count:
+    | Array<{
+        employee_id: number;
+        leave_category_id: number;
+        leave_category_name: string;
+        l_count: number;
+      }>
+    | null
+    | undefined;
   probation_month_count: number;
   reason: string;
   toDateYear: string;
@@ -103,7 +106,7 @@ const parseDateString = (value: string): Date | null => {
   return null;
 };
 
-const myLeaves = () => {
+const manageLeaves = () => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const [searchText, setSearchText] = useState("");
@@ -122,15 +125,23 @@ const myLeaves = () => {
   const [isStatus, setIsStatus] = useState("");
 
   const router = useRouter();
-
-  const accessToken = useAuthStore((state) => state.accessToken);
-
+  const { accessToken, setSessionTimeout } = useAuthStore((state) => state);
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", () => {
       setColumnWidths(getColumnWidths());
     });
     return () => subscription?.remove();
   }, []);
+
+
+
+   const showToast = (message: string) => {
+      if (Platform.OS === "android") {
+        ToastAndroid.show(message, ToastAndroid.SHORT);
+      } else {
+        Alert.alert("Notification", message);
+      }
+    };
 
   useFocusEffect(
     useCallback(() => {
@@ -154,6 +165,7 @@ const myLeaves = () => {
       });
       if (response.status === 200) {
         setIsActive(true);
+        showToast("Status Change successfully");
         await fetchLeave();
       }
 
@@ -171,9 +183,9 @@ const myLeaves = () => {
     }
   };
 
-    useEffect(()=>{
-      handleAction("accept", 0);
-    },[handleAction])
+  useEffect(() => {
+    handleAction("accept", 0);
+  }, [handleAction]);
 
   const fetchLeave = async () => {
     setLoading(true);
@@ -185,10 +197,15 @@ const myLeaves = () => {
           accesstoken: accessToken || " ",
         },
       });
+
+         if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
       const data = await response.json();
       setIsLeave(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      // console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
@@ -581,11 +598,14 @@ const myLeaves = () => {
               { color: colors.textSecondary },
             ]}
           >
-            {item.pending_leave_count.map((leave) => (
-              <Text key={leave.leave_category_id}>
-                {leave.leave_category_name}: {leave.l_count}
-              </Text>
-            ))}
+            {Array.isArray(item.pending_leave_count) &&
+            item.pending_leave_count.length > 0
+              ? item.pending_leave_count
+                  .map(
+                    (leave) => `${leave.leave_category_name}: ${leave.l_count}`
+                  )
+                  .join(", ")
+              : "N/A"}
           </Text>
         </View>
         <View style={[styles.cellContainer, { width: columnWidths.action }]}>
@@ -640,6 +660,7 @@ const myLeaves = () => {
             </TouchableOpacity>
           </View>
         </View>
+
         <View style={[styles.cellContainer, { width: columnWidths.status }]}>
           <Text
             style={[
@@ -650,7 +671,7 @@ const myLeaves = () => {
                     ? colors.success
                     : status === "Rejected"
                     ? colors.error
-                    : colors.textSecondary,
+                    : colors.accent,
               },
             ]}
           >
@@ -1133,4 +1154,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default myLeaves;
+export default manageLeaves;

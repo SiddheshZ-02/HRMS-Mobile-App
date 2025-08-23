@@ -92,8 +92,7 @@ const WorkFromHome = () => {
 
   const router = useRouter();
 
-  const accessToken = useAuthStore((state) => state.accessToken);
-
+  const { accessToken, setSessionTimeout } = useAuthStore((state) => state);
   useEffect(() => {
     const subscription = Dimensions.addEventListener("change", () => {
       setColumnWidths(getColumnWidths());
@@ -120,6 +119,12 @@ const WorkFromHome = () => {
           accesstoken: accessToken || " ",
         },
       });
+
+      if (response.status === 401) {
+        setSessionTimeout(true);
+        return;
+      }
+
       const data = await response.json();
       setIsWfh(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -306,6 +311,12 @@ const WorkFromHome = () => {
   );
 
   const WfhRow = ({ item, index }: { item: wfhType; index: number }) => {
+    const status = !item.accept_reject_flag
+      ? "Pending"
+      : item.accept_reject_flag && item.active
+      ? "Approved"
+      : "Rejected";
+
     return (
       <View
         style={[
@@ -358,13 +369,15 @@ const WorkFromHome = () => {
               styles.cell,
               {
                 color:
-                  item.accept_reject_flag === true
+                  status === "Approved"
                     ? colors.success
-                    : colors.error,
+                    : status === "Rejected"
+                    ? colors.error
+                    : colors.accent,
               },
             ]}
           >
-            {item.accept_reject_flag === true ? "Success" : "Pending"}
+            {status}
           </Text>
         </View>
       </View>
@@ -553,7 +566,9 @@ const WorkFromHome = () => {
                     renderItem={({ item, index }) => (
                       <WfhRow item={item} index={index} />
                     )}
-                    keyExtractor={(item, idx) => item?.id?.toString() ?? String(item?.id) ?? String(idx)}
+                    keyExtractor={(item, idx) =>
+                      item?.id?.toString() ?? String(item?.id) ?? String(idx)
+                    }
                     showsVerticalScrollIndicator={false}
                     recycleItems
                   />
