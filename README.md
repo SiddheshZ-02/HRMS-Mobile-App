@@ -7,7 +7,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## 📥 Download
 
-[Download App (APK)](https://docs.google.com/uc?export=download&id=1GWKmWyiV_Tg8dSst68Aj0wWd9io1cyuJ)
+[Download App (APK)](https://docs.google.com/uc?export=download&id=1IrkUw8LpP5AEJMEVJT4TSR7PLgPXoPzp)
 
 1. Install dependencies
 
