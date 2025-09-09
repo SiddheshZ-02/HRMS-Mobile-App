@@ -61,6 +61,16 @@ const index = () => {
     },
   });
 
+  const fillDemoCredentials = (roles: "Admin" | "Employee") => {
+    if (roles === "Admin") {
+      setValue("username", "jyoti.shetty@dextero.in");
+      setValue("password", "123456");
+    } else {
+      setValue("username", "harsh.bhoir@dextero.in");
+      setValue("password", "Dextero@123");
+    }
+  };
+
   useEffect(() => {
     const rehydrateAndValidate = async () => {
       try {
@@ -338,6 +348,36 @@ const index = () => {
                 <Text style={styles.loginBtnText}>LOGIN</Text>
               )}
             </TouchableOpacity>
+
+            <View
+              style={{ marginTop: 20, alignItems: "center",  }}
+            >
+              <Text style={{ fontWeight: 500, color: "black" }}>
+                Dummy Accounts
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  alignItems: "center",
+                  justifyContent: "center",
+                
+                }}
+              >
+                <TouchableOpacity
+                  style={styles.loginBtn1}
+                  onPress={() => fillDemoCredentials("Admin")}
+                >
+                  <Text style={styles.loginBtnText1}>Admin</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.loginBtn1}
+                  onPress={() => fillDemoCredentials("Employee")}
+                >
+                  <Text style={styles.loginBtnText1}>Employee</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -425,10 +465,24 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: "100%",
   },
+  loginBtn1: {
+    backgroundColor: "#1e293b",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
   loginBtnText: {
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  loginBtnText1: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+    paddingInline: 20,
   },
 });
 

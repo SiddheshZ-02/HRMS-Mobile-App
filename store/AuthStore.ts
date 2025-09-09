@@ -51,6 +51,7 @@ const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       showSessionTimeout: false,
 
+
       login: (data) =>
         set((state) => ({
           ...state,
@@ -66,7 +67,10 @@ const useAuthStore = create<AuthState>()(
           statusCode: data.statusCode ?? null,
           statusMessage: data.statusMessage ?? null,
           isAuthenticated: !!data.accessToken,
-        })),
+        })
+    
+      ),
+       
 
       logout: async () => {
         try {

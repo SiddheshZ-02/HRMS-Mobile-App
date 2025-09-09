@@ -37,6 +37,7 @@ export default function RootLayout() {
   const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
 
+
   // Rehydrate store and validate token
   useEffect(() => {
     const rehydrateAndValidate = async () => {
