@@ -9,6 +9,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 [Download App (APK)](https://docs.google.com/uc?export=download&id=1IrkUw8LpP5AEJMEVJT4TSR7PLgPXoPzp)
 
+
+<img width="200" height="200" alt="1757401187331" src="https://github.com/user-attachments/assets/9538f0b8-a804-4403-8c87-d3a986c4f457" />
+
+
 1. Install dependencies
 
    ```bash
